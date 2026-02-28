@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🎯 三角洲练枪训练营 v1.1</title>
+<title>🎯 三角洲练枪训练营 v1.2</title>
 <style>
   :root {
     --bg: #0a0e1a; --panel: #111827; --border: #1f2937;
@@ -114,7 +114,7 @@
 <body>
 
 <header>
-  <div class="logo">🎯 <span>三角洲</span> 练枪训练营 <small style="font-size:11px;opacity:.6;font-weight:400">v1.1</small></div>
+  <div class="logo">🎯 <span>三角洲</span> 练枪训练营 <small style="font-size:11px;opacity:.6;font-weight:400">v1.2</small></div>
   <div class="nav-tabs">
     <button class="nav-tab active" onclick="switchPage('arena',this)">🎮 训练场</button>
     <button class="nav-tab" onclick="switchPage('sens',this)">⚙️ 灵敏度</button>
@@ -151,8 +151,8 @@
     </svg>
     <div id="start-overlay">
       <h2>🎯 三角洲练枪训练营</h2>
-      <p>人形靶 · 近大远小 · 跳跃闪避 · 持续射击</p>
-      <p style="font-size:12px;color:#475569">爆头 -50血 · 身体 -25血 · 按住左键连射 10发/秒</p>
+      <p>真实人形 · 随机出现 · 折返闪避 · 2秒自动消失</p>
+      <p style="font-size:12px;color:#475569">爆头 -50血 · 身体 -25血 · 四肢 -12血 · 持续射击有后坐力</p>
       <div style="display:flex;gap:22px;margin-top:6px;font-size:12px;color:var(--muted)">
         <span>🪖 巡逻 — 慢速横移</span>
         <span>💨 冲刺 — 高速奔跑</span>
@@ -228,7 +228,6 @@
 </div>
 
 <script>
-// ── 页面切换 ──
 function switchPage(n,btn){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
@@ -238,7 +237,7 @@ function switchPage(n,btn){
   if(n==='stats') renderStats();
 }
 
-// ── roundRect polyfill（兼容旧浏览器）──
+// ── roundRect polyfill ──
 if(!CanvasRenderingContext2D.prototype.roundRect){
   CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){
     r=Math.min(r,w/2,h/2);
@@ -253,68 +252,91 @@ if(!CanvasRenderingContext2D.prototype.roundRect){
 }
 
 // ── Canvas 设置 ──
-const canvas=document.getElementById('gameCanvas');
-const ctx=canvas.getContext('2d');
-const wrap=document.getElementById('canvas-wrap');
-const crosshairEl=document.getElementById('crosshair');
-let W,H;
-let bgCache=null; // 必须在 resize() 调用前声明
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const wrap = document.getElementById('canvas-wrap');
+const crosshairEl = document.getElementById('crosshair');
+let W, H;
+let bgCache = null; // 必须在 resize() 之前声明
+
 function resize(){
-  W=canvas.width=wrap.clientWidth;
-  H=canvas.height=wrap.clientHeight;
-  bgCache=null; // 背景缓存失效
+  W = canvas.width = wrap.clientWidth;
+  H = canvas.height = wrap.clientHeight;
+  bgCache = null;
 }
 resize();
-window.addEventListener('resize',resize);
+window.addEventListener('resize', resize);
 
 // ── 准星 ──
-let mouseX=0,mouseY=0;
-wrap.addEventListener('mousemove',e=>{
-  const r=wrap.getBoundingClientRect();
-  mouseX=e.clientX-r.left; mouseY=e.clientY-r.top;
-  crosshairEl.style.left=mouseX+'px'; crosshairEl.style.top=mouseY+'px';
+let mouseX = 0, mouseY = 0;
+wrap.addEventListener('mousemove', e => {
+  const r = wrap.getBoundingClientRect();
+  mouseX = e.clientX - r.left;
+  mouseY = e.clientY - r.top;
+  crosshairEl.style.left = mouseX + 'px';
+  crosshairEl.style.top  = mouseY + 'px';
 });
 
-// ── 持续射击（事件绑定延迟到页面加载完成，确保 GS 和 doShoot 已定义）──
-let mouseDown=false, shootTimer=null;
-const FIRE_RATE=100;
+// ── 后坐力状态 ──
+let recoilY = 0;          // 当前累计后坐力（像素，准星向上偏移）
+let recoilX = 0;          // 水平抖动
+const RECOIL_PER_SHOT = 7;   // 每发上跳像素
+const RECOIL_HORIZ    = 3.5; // 水平随机抖动幅度
+const RECOIL_RECOVERY = 200; // 每秒恢复像素
+const RECOIL_MAX      = 80;  // 最大累积
 
-// ── 常量 ──
-const GROUND_RATIO=0.62;
-// 人形基准尺寸（距离=1.0时）
-const BASE_H=80, BASE_HEAD_R=10, BASE_BODY_W=22, BASE_BODY_H=42;
-// 距离范围 [近, 远]，控制缩放比例
-const DIST_MIN=0.45, DIST_MAX=1.0;
-// HP
-const HP_MAX=100, DMG_HEAD=50, DMG_BODY=25;
+// ── 射击参数 ──
+let mouseDown = false, shootTimer = null;
+const FIRE_RATE = 100; // ms，约10发/秒
 
-// ── 随机种子（背景稳定）──
+// ── 人体比例常量（7头身）──
+// 以 BASE_SCALE=1 时 总高=175px 为基准
+const TOTAL_H_BASE   = 175;
+const HEAD_FRAC      = 1/7;      // 头占1/7
+const TORSO_FRAC     = 2.5/7;    // 躯干2.5头
+const LEG_FRAC       = 3.5/7;    // 腿3.5头（大腿1.75+小腿1.75）
+// 宽度
+const TORSO_W_RATIO  = 1.45;     // 肩宽/头宽
+const WAIST_W_RATIO  = 0.92;     // 腰宽/肩宽
+const ARM_W_RATIO    = 0.38;     // 手臂线宽/头宽
+const LEG_W_RATIO    = 0.48;     // 腿线宽/头宽
+
+// 伤害
+const HP_MAX   = 100;
+const DMG_HEAD = 50;
+const DMG_BODY = 25;
+const DMG_LIMB = 12;
+
+// 目标存活时限
+const TARGET_LIFETIME = 2000;
+
+// 距离范围（控制缩放）
+const DIST_MIN = 0.42, DIST_MAX = 1.0;
+const GROUND_RATIO = 0.62;
+
+// ── 背景缓存 ──
 function seeded(seed){ let s=seed; return ()=>{ s=(s*16807)%2147483647; return(s-1)/2147483646; }; }
 
 function getBg(){
-  if(bgCache&&bgCache.width===W&&bgCache.height===H) return bgCache;
-  bgCache=document.createElement('canvas');
-  bgCache.width=W; bgCache.height=H;
-  const mc=bgCache.getContext('2d');
-  const gY=H*GROUND_RATIO;
-  const rng=seeded(37), rng2=seeded(91);
-  // 天空
-  const sky=mc.createLinearGradient(0,0,0,gY);
+  if(bgCache && bgCache.width===W && bgCache.height===H) return bgCache;
+  bgCache = document.createElement('canvas');
+  bgCache.width = W; bgCache.height = H;
+  const mc = bgCache.getContext('2d');
+  const gY = H * GROUND_RATIO;
+  const rng = seeded(37), rng2 = seeded(91);
+  const sky = mc.createLinearGradient(0,0,0,gY);
   sky.addColorStop(0,'#141e2e'); sky.addColorStop(1,'#1e3045');
-  mc.fillStyle=sky; mc.fillRect(0,0,W,gY);
-  // 远山
-  mc.fillStyle='#1a2e40';
+  mc.fillStyle = sky; mc.fillRect(0,0,W,gY);
+  mc.fillStyle = '#1a2e40';
   mc.beginPath(); mc.moveTo(0,gY);
   let x=0;
   while(x<W){ const mw=90+rng()*130,mh=55+rng()*85; mc.lineTo(x+mw/2,gY-mh); mc.lineTo(x+mw,gY); x+=mw; }
   mc.lineTo(W,gY); mc.closePath(); mc.fill();
-  // 树木
   mc.fillStyle='#112010';
   for(let tx=0;tx<W;tx+=20+rng2()*25){
     const th=25+rng2()*38,tw=4+rng2()*4;
     mc.fillRect(tx,gY-th,tw,th);
   }
-  // 地面
   const gr=mc.createLinearGradient(0,gY,0,H);
   gr.addColorStop(0,'#243a16'); gr.addColorStop(.4,'#182a10'); gr.addColorStop(1,'#0e1a09');
   mc.fillStyle=gr; mc.fillRect(0,gY,W,H-gY);
@@ -326,477 +348,619 @@ function getBg(){
 // ── Target 类 ──
 class Target {
   constructor(mode){
-    this.mode=mode;
-    this.alive=true; this.dead=false; this.dying=false; this.dyingTimer=0;
-    this.hp=HP_MAX; this.maxHp=HP_MAX;
-    this.born=Date.now();
-    this.hits=0; this.headshots=0;
+    this.mode = mode;
+    this.alive = true; this.dying = false; this.dyingTimer = 0;
+    this.hp = HP_MAX; this.maxHp = HP_MAX;
+    this.born = Date.now();
+    this.hits = 0; this.headshots = 0;
 
-    // 距离（影响缩放）
-    this.dist=DIST_MIN+Math.random()*(DIST_MAX-DIST_MIN);
-    // 距离越远，footY 越靠近地平线
-    const gY=H*GROUND_RATIO;
-    const dNorm=(this.dist-DIST_MIN)/(DIST_MAX-DIST_MIN); // 0=近,1=远
-    this.footY=gY - dNorm*(gY*0.25) + (Math.random()-0.5)*H*0.04;
+    // 距离 → 缩放
+    this.dist  = DIST_MIN + Math.random() * (DIST_MAX - DIST_MIN);
+    this.scale = this.dist;
+    const s = this.scale;
 
-    // 缩放
-    this.scale=this.dist;
-    this.fh=BASE_H*this.scale;
-    this.headR=BASE_HEAD_R*this.scale;
-    this.bodyW=BASE_BODY_W*this.scale;
-    this.bodyH=BASE_BODY_H*this.scale;
+    // 人体各尺寸
+    const totalH   = TOTAL_H_BASE * s;
+    this.headR     = totalH * HEAD_FRAC / 2;
+    this.torsoH    = totalH * TORSO_FRAC;
+    this.legH      = totalH * LEG_FRAC;
+    this.shoulderW = this.headR * 2 * TORSO_W_RATIO;
+    this.waistW    = this.shoulderW * WAIST_W_RATIO;
+    this.armW      = this.headR * 2 * ARM_W_RATIO;
+    this.legW      = this.headR * 2 * LEG_W_RATIO;
 
-    // 方向 & 速度（随机差异化）
-    this.dir=Math.random()<.5?1:-1;
-    this.x=this.dir>0?-40:W+40;
+    // 脚的 Y 坐标（近大远小，远的靠近地平线）
+    const gY   = H * GROUND_RATIO;
+    const dNorm = (this.dist - DIST_MIN) / (DIST_MAX - DIST_MIN);
+    this.footY     = gY - dNorm * (gY * 0.28) + (Math.random()-0.5) * H * 0.04;
+    this.baseFootY = this.footY;
 
-    const speeds={patrol:[70,160],sprint:[180,340],peek:[0,0],multi:[90,250]};
-    const[mn,mx]=speeds[mode]||[100,200];
-    this.speed=(mn+Math.random()*(mx-mn))*this.scale; // 远处目标视觉上也慢一点
-
-    // 跳跃参数
-    this.vy=0; this.baseFootY=this.footY;
-    this.jumping=false;
-    this.jumpCooldown=1000+Math.random()*3000; // 每隔多久可以跳
-    this.lastJumpTime=Date.now()+Math.random()*2000;
-
-    // 探头模式
-    if(mode==='peek'){
-      this.peekState='in';
-      this.peekEdge=this.dir>0?W*0.1+Math.random()*W*0.4:W*0.5+Math.random()*W*0.35;
-      this.peekDuration=500+Math.random()*900;
-      this.peekVisible=0;
-      this.speed=(220+Math.random()*140)*this.scale;
-      this.x=this.dir>0?this.peekEdge-80:this.peekEdge+80;
+    // 出现位置：65% 随机屏幕内，35% 从边缘进入
+    const fromEdge = (mode === 'peek') || Math.random() < 0.35;
+    if(fromEdge){
+      this.dir = Math.random() < 0.5 ? 1 : -1;
+      this.x   = this.dir > 0 ? -50 : W + 50;
+    } else {
+      this.x   = W * 0.08 + Math.random() * W * 0.84;
+      this.dir = Math.random() < 0.5 ? 1 : -1;
     }
 
-    this.walkPhase=Math.random()*Math.PI*2;
-    this.color={body:'#4a7a5a',head:'#c8a882',gear:'#3a5a4a'};
+    // 速度
+    const speedRanges = {patrol:[70,160], sprint:[180,340], peek:[0,0], multi:[90,250]};
+    const [mn, mx] = speedRanges[mode] || [100,200];
+    this.speed = (mn + Math.random() * (mx - mn)) * s;
+
+    // 折返
+    this.lastReverseTime  = Date.now() + Math.random() * 600;
+    this.reverseCooldown  = 700 + Math.random() * 1000;
+    this.reverseChance    = 0.010; // 每帧约1%，约1.5~2秒一次
+
+    // 跳跃
+    this.vy = 0; this.jumping = false;
+    this.lastJumpTime  = Date.now() + Math.random() * 2000;
+    this.jumpCooldown  = 1200 + Math.random() * 3000;
+
+    // 探头模式
+    if(mode === 'peek'){
+      this.peekState    = 'in';
+      this.peekEdge     = this.dir > 0
+        ? W * 0.1 + Math.random() * W * 0.4
+        : W * 0.5 + Math.random() * W * 0.35;
+      this.peekDuration = 500 + Math.random() * 900;
+      this.peekVisible  = 0;
+      this.speed        = (220 + Math.random() * 140) * s;
+      this.x = this.dir > 0 ? this.peekEdge - 80 : this.peekEdge + 80;
+    }
+
+    this.walkPhase = Math.random() * Math.PI * 2;
+    this.color = {
+      skin:'#c8a882', torso:'#3a5a4a', pants:'#2e3e2e',
+      boots:'#1a1a1a', helmet:'#3a5a4a'
+    };
   }
 
-  get headY(){ return this.footY-this.fh+this.headR; }
-  get shoulderY(){ return this.headY+this.headR+2*this.scale; }
+  // 关键 Y 坐标
+  get headCY(){ return this.footY - this.legH - this.torsoH - this.headR; }
+  get shoulderY(){ return this.headCY + this.headR * 2 + 1 * this.scale; }
+  get hipY(){ return this.shoulderY + this.torsoH; }
+  get kneeY(){ return this.hipY + this.legH * 0.52; }
 
   update(dt){
     if(!this.alive) return;
     if(this.dying){
-      this.dyingTimer+=dt*1000;
-      if(this.dyingTimer>300){ this.alive=false; }
+      this.dyingTimer += dt * 1000;
+      if(this.dyingTimer > 320) this.alive = false;
+      return;
+    }
+    // 超时消失
+    if(Date.now() - this.born > TARGET_LIFETIME){
+      this.dying = true; this.dyingTimer = 0;
       return;
     }
 
-    // 跳跃逻辑
-    const now=Date.now();
-    if(!this.jumping && now-this.lastJumpTime>this.jumpCooldown && this.mode!=='peek'){
-      // 随机触发跳跃
-      if(Math.random()<0.015){ // 每帧约1.5%概率（dt约16ms时约每秒1次）
-        this.jumping=true;
-        this.vy=-(320+Math.random()*180)*this.scale; // 跳跃初速度
-        this.lastJumpTime=now;
-        this.jumpCooldown=1500+Math.random()*3500;
+    // 跳跃
+    const now = Date.now();
+    if(!this.jumping && now - this.lastJumpTime > this.jumpCooldown && this.mode !== 'peek'){
+      if(Math.random() < 0.012){
+        this.jumping = true;
+        this.vy = -(300 + Math.random() * 160) * this.scale;
+        this.lastJumpTime = now;
+        this.jumpCooldown = 1500 + Math.random() * 3500;
       }
     }
     if(this.jumping){
-      this.vy+=900*this.scale*dt; // 重力
-      this.footY+=this.vy*dt;
-      if(this.footY>=this.baseFootY){
-        this.footY=this.baseFootY;
-        this.vy=0; this.jumping=false;
+      this.vy += 900 * this.scale * dt;
+      this.footY += this.vy * dt;
+      if(this.footY >= this.baseFootY){
+        this.footY = this.baseFootY; this.vy = 0; this.jumping = false;
       }
     }
 
-    this.walkPhase+=dt*(this.mode==='sprint'?14:8);
+    this.walkPhase += dt * (this.mode === 'sprint' ? 14 : 8);
 
     // 水平移动
-    if(this.mode==='peek'){
-      if(this.peekState==='in'){
-        this.x+=this.dir*this.speed*dt;
-        const reached=this.dir>0?this.x>=this.peekEdge:this.x<=this.peekEdge;
-        if(reached){ this.x=this.peekEdge; this.peekState='visible'; this.peekVisible=Date.now(); }
-      } else if(this.peekState==='visible'){
-        if(Date.now()-this.peekVisible>this.peekDuration) this.peekState='out';
+    if(this.mode === 'peek'){
+      if(this.peekState === 'in'){
+        this.x += this.dir * this.speed * dt;
+        const reached = this.dir > 0 ? this.x >= this.peekEdge : this.x <= this.peekEdge;
+        if(reached){ this.x = this.peekEdge; this.peekState = 'visible'; this.peekVisible = Date.now(); }
+      } else if(this.peekState === 'visible'){
+        if(Date.now() - this.peekVisible > this.peekDuration) this.peekState = 'out';
       } else {
-        this.x-=this.dir*this.speed*dt;
-        const gone=this.dir>0?this.x<this.peekEdge-100:this.x>this.peekEdge+100;
-        if(gone) this.alive=false;
+        this.x -= this.dir * this.speed * dt;
+        const gone = this.dir > 0 ? this.x < this.peekEdge - 120 : this.x > this.peekEdge + 120;
+        if(gone) this.alive = false;
       }
     } else {
-      this.x+=this.dir*this.speed*dt;
-      if(this.x<-80||this.x>W+80) this.alive=false;
+      // 随机折返
+      if(now - this.lastReverseTime > this.reverseCooldown && Math.random() < this.reverseChance){
+        this.dir *= -1;
+        this.lastReverseTime = now;
+        this.reverseCooldown = 600 + Math.random() * 1200;
+      }
+      this.x += this.dir * this.speed * dt;
+      if(this.x < -100 || this.x > W + 100) this.alive = false;
     }
   }
 
   draw(ctx){
     if(!this.alive) return;
-    const x=this.x, foot=this.footY;
-    const s=this.scale;
-    const headY=this.headY, shoulderY=this.shoulderY;
-    const hipY=shoulderY+this.bodyH;
-    const alpha=this.dying?Math.max(0,1-this.dyingTimer/300):1;
+    const x = this.x, s = this.scale;
+    const headCY   = this.headCY;
+    const shoulderY = this.shoulderY;
+    const hipY     = this.hipY;
+    const kneeY    = this.kneeY;
+    const foot     = this.footY;
+    const gd       = this.dir; // 朝向
+    const alpha    = this.dying ? Math.max(0, 1 - this.dyingTimer/320) : 1;
+    const flash    = this.dying || (this.hp < 50 && Math.floor(Date.now()/120) % 2 === 0);
 
     ctx.save();
-    ctx.globalAlpha=alpha;
+    ctx.globalAlpha = alpha;
+
+    const skinC   = flash ? '#ff3366' : this.color.skin;
+    const torsoC  = flash ? '#ff3366' : this.color.torso;
+    const pantsC  = flash ? '#ff3366' : this.color.pants;
+    const bootsC  = flash ? '#ff3366' : this.color.boots;
+    const helmC   = flash ? '#ff3366' : this.color.helmet;
 
     // 阴影
-    ctx.fillStyle='rgba(0,0,0,.22)';
-    ctx.beginPath(); ctx.ellipse(x,foot+2*s,13*s,3*s,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,.2)';
+    ctx.beginPath(); ctx.ellipse(x, foot+2*s, this.shoulderW*0.8, 3*s, 0, 0, Math.PI*2); ctx.fill();
 
-    const flash=this.dying||(this.hp<50&&Math.floor(Date.now()/120)%2===0);
+    const walkSwing = Math.sin(this.walkPhase) * (this.jumping ? 0 : (this.mode==='sprint' ? 14 : 9));
 
-    // 腿
-    ctx.strokeStyle=flash?'#ff3366':'#2e4a2e';
-    ctx.lineWidth=6*s; ctx.lineCap='round';
-    const legSwing=Math.sin(this.walkPhase)*(this.jumping?0:(this.mode==='sprint'?13:8));
-    if(this.mode!=='peek'||this.peekState!=='visible'){
-      ctx.beginPath(); ctx.moveTo(x-4*s,hipY); ctx.lineTo(x-5*s+legSwing*s,foot); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(x+4*s,hipY); ctx.lineTo(x+5*s-legSwing*s,foot); ctx.stroke();
-    } else {
-      ctx.beginPath(); ctx.moveTo(x-4*s,hipY); ctx.lineTo(x-4*s,foot); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(x+4*s,hipY); ctx.lineTo(x+4*s,foot); ctx.stroke();
-    }
+    // ── 腿（前后腿，两段：大腿+小腿）──
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
 
-    // 躯干
-    ctx.fillStyle=flash?'#ff3366':this.color.gear;
-    ctx.strokeStyle=flash?'#ff3366':'#1e3a1e'; ctx.lineWidth=1;
-    ctx.beginPath(); ctx.roundRect(x-this.bodyW/2,shoulderY,this.bodyW,this.bodyH,3*s); ctx.fill(); ctx.stroke();
+    // 后腿（稍暗）
+    ctx.globalAlpha = alpha * 0.72;
+    const lLegOffX = -this.shoulderW * 0.22;
+    const rLegOffX =  this.shoulderW * 0.22;
 
-    // 武器
-    const gd=this.dir;
-    ctx.fillStyle=flash?'#ff3366':'#1a1a1a';
-    ctx.save(); ctx.translate(x+gd*6*s, shoulderY+10*s);
-    ctx.fillRect(gd>0?0:-26*s,-3*s,26*s,5*s);
-    ctx.fillRect(gd>0?-4*s:-2*s,-6*s,8*s,12*s);
+    // 大腿
+    ctx.strokeStyle = pantsC; ctx.lineWidth = this.legW * 1.05;
+    ctx.beginPath(); ctx.moveTo(x + rLegOffX, hipY); ctx.lineTo(x + rLegOffX - walkSwing*s, kneeY); ctx.stroke();
+    // 小腿
+    ctx.lineWidth = this.legW * 0.85;
+    ctx.beginPath(); ctx.moveTo(x + rLegOffX - walkSwing*s, kneeY); ctx.lineTo(x + rLegOffX - walkSwing*s*0.5, foot); ctx.stroke();
+    // 靴子
+    ctx.strokeStyle = bootsC; ctx.lineWidth = this.legW * 0.9;
+    ctx.beginPath(); ctx.moveTo(x + rLegOffX - walkSwing*s*0.5, foot); ctx.lineTo(x + rLegOffX - walkSwing*s*0.5 + gd*3*s, foot - this.legH*0.07); ctx.stroke();
+
+    // 前腿
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = pantsC; ctx.lineWidth = this.legW * 1.05;
+    ctx.beginPath(); ctx.moveTo(x + lLegOffX, hipY); ctx.lineTo(x + lLegOffX + walkSwing*s, kneeY); ctx.stroke();
+    ctx.lineWidth = this.legW * 0.85;
+    ctx.beginPath(); ctx.moveTo(x + lLegOffX + walkSwing*s, kneeY); ctx.lineTo(x + lLegOffX + walkSwing*s*0.5, foot); ctx.stroke();
+    ctx.strokeStyle = bootsC; ctx.lineWidth = this.legW * 0.9;
+    ctx.beginPath(); ctx.moveTo(x + lLegOffX + walkSwing*s*0.5, foot); ctx.lineTo(x + lLegOffX + walkSwing*s*0.5 + gd*3*s, foot - this.legH*0.07); ctx.stroke();
+
+    // ── 躯干（梯形：肩宽>腰宽）──
+    const sw = this.shoulderW, ww = this.waistW;
+    ctx.fillStyle = torsoC; ctx.strokeStyle = flash ? '#ff3366' : '#1e3a1e'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x - sw/2, shoulderY);
+    ctx.lineTo(x + sw/2, shoulderY);
+    ctx.lineTo(x + ww/2, hipY);
+    ctx.lineTo(x - ww/2, hipY);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+
+    // ── 武器 ──
+    ctx.fillStyle = flash ? '#ff3366' : '#1a1a1a';
+    ctx.save();
+    ctx.translate(x + gd * sw * 0.52, shoulderY + this.torsoH * 0.3);
+    const gunL = this.headR * 3.6;
+    const gunH = this.headR * 0.45;
+    ctx.fillRect(gd > 0 ? 0 : -gunL, -gunH/2, gunL, gunH);
+    ctx.fillRect(gd > 0 ? -gunH : -gunH, -gunH*1.3, gunH*1.2, gunH*2);
     ctx.restore();
 
-    // 手臂
-    ctx.strokeStyle=flash?'#ff3366':this.color.gear;
-    ctx.lineWidth=5*s; ctx.lineCap='round';
-    const armSwing=-Math.sin(this.walkPhase)*5;
-    ctx.beginPath(); ctx.moveTo(x-this.bodyW/2,shoulderY+6*s); ctx.lineTo(x-this.bodyW/2-6*s,shoulderY+18*s+armSwing*s); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(x+this.bodyW/2,shoulderY+6*s); ctx.lineTo(x+this.bodyW/2+8*s*gd,shoulderY+12*s); ctx.stroke();
+    // ── 手臂（后臂偏暗）──
+    const armY1 = shoulderY + 2*s;
+    const elbowOff = this.headR * 2.0;
+    const wristOff = this.headR * 1.8;
+    const armSwing = -Math.sin(this.walkPhase) * 6;
+    // 后臂
+    ctx.globalAlpha = alpha * 0.72;
+    ctx.strokeStyle = torsoC; ctx.lineWidth = this.armW;
+    ctx.beginPath(); ctx.moveTo(x + sw/2, armY1); ctx.lineTo(x + gd*elbowOff*0.5, armY1 + elbowOff + armSwing*s); ctx.stroke();
+    ctx.strokeStyle = skinC;
+    ctx.beginPath(); ctx.moveTo(x + gd*elbowOff*0.5, armY1 + elbowOff + armSwing*s); ctx.lineTo(x + gd*elbowOff*0.9, armY1 + elbowOff + wristOff*0.7 + armSwing*s); ctx.stroke();
+    // 前臂
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = torsoC; ctx.lineWidth = this.armW;
+    ctx.beginPath(); ctx.moveTo(x - sw/2, armY1); ctx.lineTo(x - gd*elbowOff*0.4, armY1 + elbowOff - armSwing*s); ctx.stroke();
+    ctx.strokeStyle = skinC;
+    ctx.beginPath(); ctx.moveTo(x - gd*elbowOff*0.4, armY1 + elbowOff - armSwing*s); ctx.lineTo(x - gd*elbowOff*0.1, armY1 + elbowOff + wristOff*0.55 - armSwing*s); ctx.stroke();
 
-    // 头部
-    ctx.fillStyle=flash?'#ff3366':this.color.head;
-    ctx.strokeStyle=flash?'#ff3366':'#a07050'; ctx.lineWidth=1.5;
-    ctx.beginPath(); ctx.arc(x,headY,this.headR,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    // ── 脖子 ──
+    ctx.strokeStyle = skinC; ctx.lineWidth = this.headR * 0.55; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(x, shoulderY); ctx.lineTo(x, headCY + this.headR); ctx.stroke();
+
+    // ── 头部 ──
+    ctx.fillStyle = skinC; ctx.strokeStyle = flash ? '#ff3366' : '#a07050'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(x, headCY, this.headR, 0, Math.PI*2); ctx.fill(); ctx.stroke();
     // 头盔
-    ctx.fillStyle=flash?'#ff3366':this.color.gear;
-    ctx.beginPath(); ctx.ellipse(x,headY-2*s,this.headR+1.5,this.headR*0.65,0,Math.PI,0); ctx.fill();
+    ctx.fillStyle = helmC;
+    ctx.beginPath(); ctx.ellipse(x, headCY - this.headR*0.12, this.headR + 2*s, this.headR*0.68, 0, Math.PI, 0); ctx.fill();
+    // 护目镜
+    ctx.fillStyle = 'rgba(0,200,230,0.28)';
+    ctx.beginPath(); ctx.ellipse(x + gd*this.headR*0.22, headCY + this.headR*0.08, this.headR*0.62, this.headR*0.3, 0, 0, Math.PI*2); ctx.fill();
 
-    // 血条（显示在头部上方）
-    if(!this.dying && this.hp<this.maxHp){
-      const bw=this.bodyW*1.4, bh=4*s;
-      const bx=x-bw/2, by=headY-this.headR-10*s;
-      ctx.fillStyle='rgba(0,0,0,.5)';
-      ctx.fillRect(bx,by,bw,bh);
-      const pct=this.hp/this.maxHp;
-      ctx.fillStyle=pct>0.5?'#00ff88':pct>0.25?'#ffaa00':'#ff3366';
-      ctx.fillRect(bx,by,bw*pct,bh);
-      ctx.strokeStyle='rgba(255,255,255,.2)'; ctx.lineWidth=.5;
-      ctx.strokeRect(bx,by,bw,bh);
+    // ── 血条 ──
+    if(!this.dying && this.hp < this.maxHp){
+      const bw = sw * 1.5, bh = 4*s;
+      const bx = x - bw/2, by = headCY - this.headR - 11*s;
+      ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(bx, by, bw, bh);
+      const pct = this.hp / this.maxHp;
+      ctx.fillStyle = pct > 0.5 ? '#00ff88' : pct > 0.25 ? '#ffaa00' : '#ff3366';
+      ctx.fillRect(bx, by, bw*pct, bh);
+      ctx.strokeStyle = 'rgba(255,255,255,.2)'; ctx.lineWidth = .5;
+      ctx.strokeRect(bx, by, bw, bh);
     }
 
     ctx.restore();
   }
 
-  // 判断点击部位
-  checkHit(mx,my){
-    const headY=this.headY, shoulderY=this.shoulderY;
+  checkHit(mx, my){
+    const headCY    = this.headCY;
+    const shoulderY = this.shoulderY;
+    const hipY      = this.hipY;
+    const foot      = this.footY;
+    const s         = this.scale;
     // 头部
-    if(Math.hypot(mx-this.x,my-headY)<this.headR+5*this.scale) return 'head';
+    if(Math.hypot(mx - this.x, my - headCY) < this.headR + 4*s) return 'head';
     // 躯干
-    const bx=this.x-this.bodyW/2-5, bx2=this.x+this.bodyW/2+5;
-    const by=shoulderY-4, by2=shoulderY+this.bodyH+4;
-    if(mx>bx&&mx<bx2&&my>by&&my<by2) return 'body';
+    const tx1 = this.x - this.shoulderW/2 - 3, tx2 = this.x + this.shoulderW/2 + 3;
+    if(mx > tx1 && mx < tx2 && my > shoulderY - 3 && my < hipY + 4) return 'body';
     // 腿
-    if(mx>this.x-10*this.scale&&mx<this.x+10*this.scale&&my>by2&&my<this.footY+5) return 'body';
+    const lx1 = this.x - this.shoulderW*0.55, lx2 = this.x + this.shoulderW*0.55;
+    if(mx > lx1 && mx < lx2 && my > hipY && my < foot + 5) return 'limb';
+    // 手臂范围
+    if(mx > this.x - this.shoulderW*1.1 && mx < this.x + this.shoulderW*1.1
+       && my > shoulderY && my < hipY + this.headR*2) return 'limb';
     return null;
   }
 
   takeDamage(type){
-    const dmg=type==='head'?DMG_HEAD:DMG_BODY;
-    this.hp=Math.max(0,this.hp-dmg);
-    if(type==='head') this.headshots++;
+    const dmg = type === 'head' ? DMG_HEAD : type === 'limb' ? DMG_LIMB : DMG_BODY;
+    this.hp = Math.max(0, this.hp - dmg);
+    if(type === 'head') this.headshots++;
     this.hits++;
-    if(this.hp<=0 && !this.dying){
-      this.dying=true; this.dyingTimer=0;
-      return true; // killed
+    if(this.hp <= 0 && !this.dying){
+      this.dying = true; this.dyingTimer = 0;
+      return true;
     }
     return false;
   }
 }
 
 // ── 游戏状态 ──
-let GS={
-  running:false, mode:'patrol',
-  kills:0, hits:0, misses:0, headshots:0, combo:0, maxCombo:0,
-  shotsFired:0, reactionTimes:[],
-  timeLeft:60, targets:[], animFrame:null, timer:null, spawnInterval:null, lastFrame:0,
+let GS = {
+  running: false, mode: 'patrol',
+  kills: 0, hits: 0, misses: 0, headshots: 0, combo: 0, maxCombo: 0,
+  shotsFired: 0, reactionTimes: [],
+  timeLeft: 60, targets: [], animFrame: null, timer: null, spawnInterval: null,
+  lastFrame: 0,
 };
 
-// ── 鼠标事件（在 GS 和 doShoot 定义之后绑定）──
-wrap.addEventListener('mousedown',e=>{
-  if(e.button!==0||!GS.running) return;
-  mouseDown=true;
+// ── 鼠标事件（在 GS 声明后绑定）──
+wrap.addEventListener('mousedown', e => {
+  if(e.button !== 0 || !GS.running) return;
+  mouseDown = true;
   doShoot();
-  shootTimer=setInterval(doShoot, FIRE_RATE);
+  shootTimer = setInterval(doShoot, FIRE_RATE);
 });
-document.addEventListener('mouseup',e=>{
-  if(e.button!==0) return;
-  mouseDown=false;
-  clearInterval(shootTimer); shootTimer=null;
+document.addEventListener('mouseup', e => {
+  if(e.button !== 0) return;
+  mouseDown = false;
+  clearInterval(shootTimer); shootTimer = null;
 });
-wrap.addEventListener('mouseleave',()=>{
-  mouseDown=false;
-  clearInterval(shootTimer); shootTimer=null;
+wrap.addEventListener('mouseleave', () => {
+  mouseDown = false;
+  clearInterval(shootTimer); shootTimer = null;
 });
-wrap.addEventListener('contextmenu',e=>e.preventDefault());
+wrap.addEventListener('contextmenu', e => e.preventDefault());
 
 function setMode(m){
-  GS.mode=m;
-  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));
-  document.getElementById('btn-'+m).classList.add('active');
+  GS.mode = m;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-' + m).classList.add('active');
 }
 
-function toggleGame(){ GS.running?stopGame():startGame(); }
+function toggleGame(){ GS.running ? stopGame() : startGame(); }
 
 function startGame(){
-  document.getElementById('start-overlay').style.display='none';
+  document.getElementById('start-overlay').style.display = 'none';
   document.getElementById('result-modal').classList.remove('show');
-  Object.assign(GS,{
-    running:true,kills:0,hits:0,misses:0,headshots:0,combo:0,maxCombo:0,
-    shotsFired:0,reactionTimes:[],timeLeft:60,targets:[],lastFrame:performance.now(),
+  recoilY = 0; recoilX = 0;
+  Object.assign(GS, {
+    running:true, kills:0, hits:0, misses:0, headshots:0,
+    combo:0, maxCombo:0, shotsFired:0, reactionTimes:[],
+    timeLeft:60, targets:[], lastFrame:performance.now(),
   });
-  const btn=document.getElementById('startBtn');
-  btn.textContent='⏹ 停止'; btn.classList.add('stop');
+  const btn = document.getElementById('startBtn');
+  btn.textContent = '⏹ 停止'; btn.classList.add('stop');
   updateHUD(); spawnTargets();
-  const ms={patrol:2400,sprint:1800,peek:2200,multi:1400}[GS.mode]||2000;
-  GS.spawnInterval=setInterval(spawnTargets,ms);
-  GS.timer=setInterval(()=>{
+  const ms = {patrol:2200, sprint:1600, peek:2000, multi:1200}[GS.mode] || 2000;
+  GS.spawnInterval = setInterval(spawnTargets, ms);
+  GS.timer = setInterval(() => {
     GS.timeLeft--;
-    document.getElementById('hud-time').textContent=GS.timeLeft+'s';
-    if(GS.timeLeft<=0) stopGame(true);
-  },1000);
+    document.getElementById('hud-time').textContent = GS.timeLeft + 's';
+    if(GS.timeLeft <= 0) stopGame(true);
+  }, 1000);
   requestAnimationFrame(gameLoop);
 }
 
 function spawnTargets(){
   if(!GS.running) return;
-  GS.targets=GS.targets.filter(t=>t.alive);
-  const max={patrol:1,sprint:1,peek:1,multi:3}[GS.mode]||1;
-  const need=max-GS.targets.length;
-  for(let i=0;i<need;i++) GS.targets.push(new Target(GS.mode));
+  GS.targets = GS.targets.filter(t => t.alive);
+  const max = {patrol:1, sprint:1, peek:1, multi:3}[GS.mode] || 1;
+  const need = max - GS.targets.length;
+  for(let i = 0; i < need; i++) GS.targets.push(new Target(GS.mode));
 }
 
 function gameLoop(ts){
   if(!GS.running) return;
-  const dt=Math.min((ts-GS.lastFrame)/1000,.05);
-  GS.lastFrame=ts;
-  GS.targets.forEach(t=>t.update(dt));
-  GS.targets=GS.targets.filter(t=>t.alive);
+  const dt = Math.min((ts - GS.lastFrame) / 1000, 0.05);
+  GS.lastFrame = ts;
+
+  // 后坐力恢复
+  const recovDt = RECOIL_RECOVERY * dt;
+  recoilY = Math.max(0, recoilY - recovDt);
+  recoilX = recoilX * (1 - dt * 8); // 水平快速衰减
+
+  GS.targets.forEach(t => t.update(dt));
+  GS.targets = GS.targets.filter(t => t.alive);
   drawScene();
-  GS.animFrame=requestAnimationFrame(gameLoop);
+  GS.animFrame = requestAnimationFrame(gameLoop);
 }
 
 function drawScene(){
-  ctx.clearRect(0,0,W,H);
-  // 背景（缓存）
-  try{ ctx.drawImage(getBg(),0,0); }catch(e){}
-  // 探头掩体
-  if(GS.mode==='peek') drawCover();
-  // 目标按距离由远到近排序（dist小=近=后画=在前）
-  GS.targets.sort((a,b)=>b.dist-a.dist).forEach(t=>t.draw(ctx));
-  // 瞄准辅助线（淡）
-  const gY=H*GROUND_RATIO;
-  ctx.strokeStyle='rgba(0,212,255,.04)';
-  ctx.lineWidth=1; ctx.setLineDash([6,14]);
-  ctx.beginPath(); ctx.moveTo(0,gY-BASE_H*0.55); ctx.lineTo(W,gY-BASE_H*0.55); ctx.stroke();
-  ctx.setLineDash([]);
+  ctx.clearRect(0, 0, W, H);
+  try{ ctx.drawImage(getBg(), 0, 0); } catch(e){}
+  if(GS.mode === 'peek') drawCover();
+  GS.targets.sort((a,b) => b.dist - a.dist).forEach(t => t.draw(ctx));
 }
 
 function drawCover(){
-  const gY=H*GROUND_RATIO;
-  [[W*.12,gY-44,60,44],[W*.52,gY-52,68,52],[W*.78,gY-38,54,38]].forEach(([x,y,w,h])=>{
-    ctx.fillStyle='#3a3020'; ctx.strokeStyle='#252010'; ctx.lineWidth=2;
+  const gY = H * GROUND_RATIO;
+  [[W*.12,gY-44,60,44],[W*.52,gY-52,68,52],[W*.78,gY-38,54,38]].forEach(([x,y,w,h]) => {
+    ctx.fillStyle = '#3a3020'; ctx.strokeStyle = '#252010'; ctx.lineWidth = 2;
     ctx.fillRect(x,y,w,h); ctx.strokeRect(x,y,w,h);
-    ctx.fillStyle='#4a3828';
+    ctx.fillStyle = '#4a3828';
     ctx.fillRect(x+5,y+7,w-10,10); ctx.fillRect(x+5,y+22,w-10,10);
   });
 }
 
-// ── 射击 ──
+// ── 射击（含后坐力）──
 function doShoot(){
   if(!GS.running) return;
-  const rect=canvas.getBoundingClientRect();
-  const scaleX=W/rect.width, scaleY=H/rect.height;
-  const cx=(mouseX)*scaleX, cy=(mouseY)*scaleY;
+
+  // 累加后坐力
+  recoilY = Math.min(RECOIL_MAX, recoilY + RECOIL_PER_SHOT);
+  recoilX += (Math.random() - 0.5) * 2 * RECOIL_HORIZ;
+
+  // 实际射击位置 = 准星 + 后坐力偏移
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = W / rect.width, scaleY = H / rect.height;
+  const cx = mouseX * scaleX + recoilX;
+  const cy = mouseY * scaleY - recoilY;
+
   GS.shotsFired++;
 
-  // 按距离由近到远检测（近的优先）
-  const sorted=[...GS.targets].sort((a,b)=>a.dist-b.dist);
-  let hitAny=false;
+  const sorted = [...GS.targets].sort((a,b) => a.dist - b.dist);
+  let hitAny = false;
   for(const t of sorted){
-    if(!t.alive||t.dying) continue;
-    const part=t.checkHit(cx,cy);
+    if(!t.alive || t.dying) continue;
+    const part = t.checkHit(cx, cy);
     if(part){
-      const killed=t.takeDamage(part);
+      const killed = t.takeDamage(part);
       GS.hits++;
-      if(part==='head') GS.headshots++;
-      if(killed){ GS.kills++; GS.combo++; if(GS.combo>GS.maxCombo)GS.maxCombo=GS.combo; }
-      GS.reactionTimes.push(Date.now()-t.born);
-      hitAny=true;
-      showFx(mouseX,mouseY,part,killed);
+      if(part === 'head') GS.headshots++;
+      if(killed){ GS.kills++; GS.combo++; if(GS.combo > GS.maxCombo) GS.maxCombo = GS.combo; }
+      GS.reactionTimes.push(Date.now() - t.born);
+      hitAny = true;
+      showFx(mouseX, mouseY, part, killed);
       updateHUD();
       break;
     }
   }
   if(!hitAny){
-    GS.misses++; GS.combo=0;
-    showFx(mouseX,mouseY,'miss',false);
+    GS.misses++; GS.combo = 0;
+    showFx(mouseX, mouseY, 'miss', false);
     updateHUD();
   }
 }
 
-function showFx(x,y,type,killed){
-  const el=document.createElement('div');
-  el.className='fx'+(type==='head'?' hs':type==='miss'?' miss':'');
-  el.style.left=(x-18)+'px'; el.style.top=(y-12)+'px';
-  if(type==='head') el.textContent=killed?'💥 爆头击杀!':'💥 爆头 -50';
-  else if(type==='body') el.textContent=killed?'☠️ 击杀!':'-25';
-  else el.textContent='✗';
+function showFx(x, y, type, killed){
+  const el = document.createElement('div');
+  el.className = 'fx' + (type==='head' ? ' hs' : type==='miss' ? ' miss' : '');
+  el.style.left = (x - 18) + 'px'; el.style.top = (y - 12) + 'px';
+  if(type === 'head')      el.textContent = killed ? '💥 爆头击杀!' : '💥 爆头 -50';
+  else if(type === 'body') el.textContent = killed ? '☠️ 击杀!' : '-25';
+  else if(type === 'limb') el.textContent = killed ? '☠️ 击杀!' : '🦵 -12';
+  else                     el.textContent = '✗';
   wrap.appendChild(el);
-  setTimeout(()=>el.remove(),650);
+  setTimeout(() => el.remove(), 650);
 }
 
 function updateHUD(){
-  const total=GS.hits+GS.misses;
-  const acc=total>0?Math.round(GS.hits/total*100)+'%':'-';
-  const hs=GS.hits>0?Math.round(GS.headshots/GS.hits*100)+'%':'-';
-  document.getElementById('hud-kills').textContent=GS.kills;
-  document.getElementById('hud-hits').textContent=GS.hits;
-  document.getElementById('hud-miss').textContent=GS.misses;
-  document.getElementById('hud-acc').textContent=acc;
-  document.getElementById('hud-hs').textContent=hs;
-  document.getElementById('hud-combo').textContent='x'+GS.combo;
+  const total = GS.hits + GS.misses;
+  const acc   = total > 0 ? Math.round(GS.hits / total * 100) + '%' : '-';
+  const hs    = GS.hits > 0 ? Math.round(GS.headshots / GS.hits * 100) + '%' : '-';
+  document.getElementById('hud-kills').textContent = GS.kills;
+  document.getElementById('hud-hits').textContent  = GS.hits;
+  document.getElementById('hud-miss').textContent  = GS.misses;
+  document.getElementById('hud-acc').textContent   = acc;
+  document.getElementById('hud-hs').textContent    = hs;
+  document.getElementById('hud-combo').textContent = 'x' + GS.combo;
 }
 
 function stopGame(showResult=true){
-  GS.running=false;
+  GS.running = false;
   clearInterval(GS.timer); clearInterval(GS.spawnInterval);
-  clearInterval(shootTimer); mouseDown=false;
+  clearInterval(shootTimer); mouseDown = false;
   cancelAnimationFrame(GS.animFrame);
-  ctx.clearRect(0,0,W,H);
-  const btn=document.getElementById('startBtn');
-  btn.textContent='开始训练'; btn.classList.remove('stop');
-  document.getElementById('hud-time').textContent='60s';
-  if(showResult&&(GS.hits+GS.misses>0)) showResultModal();
-  else document.getElementById('start-overlay').style.display='flex';
+  ctx.clearRect(0, 0, W, H);
+  const btn = document.getElementById('startBtn');
+  btn.textContent = '开始训练'; btn.classList.remove('stop');
+  document.getElementById('hud-time').textContent = '60s';
+  if(showResult && (GS.hits + GS.misses > 0)) showResultModal();
+  else document.getElementById('start-overlay').style.display = 'flex';
+}
+
+// ── 评级：仅根据单位时间击杀数（击杀/分钟）──
+function calcGrade(killsPerMin){
+  // 60秒局，满分参考：S≥30/min, A≥20, B≥12, C<12
+  if(killsPerMin >= 30) return 'S';
+  if(killsPerMin >= 20) return 'A';
+  if(killsPerMin >= 12) return 'B';
+  return 'C';
 }
 
 function showResultModal(){
-  const total=GS.hits+GS.misses;
-  const acc=total>0?Math.round(GS.hits/total*100):0;
-  const hs=GS.hits>0?Math.round(GS.headshots/GS.hits*100):0;
-  const avgRt=GS.reactionTimes.length>0?Math.round(GS.reactionTimes.reduce((a,b)=>a+b,0)/GS.reactionTimes.length):0;
-  const grade=acc>=85?'S':acc>=70?'A':acc>=55?'B':'C';
-  const gc={S:'#00d4ff',A:'#00ff88',B:'#ff6b35',C:'#64748b'}[grade];
-  const mn={patrol:'巡逻',sprint:'冲刺',peek:'探头',multi:'多目标'};
-  document.getElementById('result-body').innerHTML=`
+  const total = GS.hits + GS.misses;
+  const acc   = total > 0 ? Math.round(GS.hits / total * 100) : 0;
+  const hs    = GS.hits > 0 ? Math.round(GS.headshots / GS.hits * 100) : 0;
+  const avgRt = GS.reactionTimes.length > 0
+    ? Math.round(GS.reactionTimes.reduce((a,b) => a+b, 0) / GS.reactionTimes.length)
+    : 0;
+
+  // 评级：击杀/分钟（总时长固定60秒）
+  const killsPerMin = GS.kills; // 60秒局 = kills * 60/60 = kills/min
+  const grade = calcGrade(killsPerMin);
+  const gc = {S:'#00d4ff', A:'#00ff88', B:'#ff6b35', C:'#64748b'}[grade];
+  const mn = {patrol:'巡逻', sprint:'冲刺', peek:'探头', multi:'多目标'};
+  const gradeDesc = {
+    S:'精英射手 🌟', A:'老兵水平 💪', B:'继续练习 📈', C:'加油训练 🎯'
+  }[grade];
+
+  document.getElementById('result-body').innerHTML = `
     <div class="result-row"><span>模式</span><span class="val">${mn[GS.mode]}</span></div>
     <div class="result-row"><span>总击杀</span><span class="val">${GS.kills}</span></div>
+    <div class="result-row"><span>击杀/分钟</span><span class="val" style="color:${gc}">${killsPerMin}</span></div>
     <div class="result-row"><span>命中 / 射击</span><span class="val">${GS.hits} / ${total}</span></div>
     <div class="result-row"><span>命中率</span><span class="val">${acc}%</span></div>
     <div class="result-row"><span>爆头率</span><span class="val" style="color:#ffd700">${hs}%</span></div>
     <div class="result-row"><span>平均反应时间</span><span class="val">${avgRt}ms</span></div>
     <div class="result-row"><span>最高连击</span><span class="val">x${GS.maxCombo}</span></div>
-    <div class="result-row"><span>评级</span><span class="val" style="color:${gc};font-size:24px">${grade}</span></div>
+    <div class="result-row"><span>评级</span><span class="val" style="color:${gc};font-size:22px">${grade} <small style="font-size:13px">${gradeDesc}</small></span></div>
   `;
   document.getElementById('result-modal').classList.add('show');
-  saveRecord({acc,hs,avgRt,kills:GS.kills,combo:GS.maxCombo,grade,hits:GS.hits,total,mode:GS.mode,time:new Date().toLocaleString('zh-CN')});
+  saveRecord({acc, hs, avgRt, kills:GS.kills, killsPerMin, combo:GS.maxCombo, grade,
+    hits:GS.hits, total, mode:GS.mode, time:new Date().toLocaleString('zh-CN')});
 }
 
-function retryGame(){ closeResult(); setTimeout(startGame,80); }
+function retryGame(){ closeResult(); setTimeout(startGame, 80); }
 function closeResult(){
   document.getElementById('result-modal').classList.remove('show');
-  document.getElementById('start-overlay').style.display='flex';
+  document.getElementById('start-overlay').style.display = 'flex';
 }
 
 // ── 灵敏度页 ──
-let sensCtx2,sensT,sMX=-1,sMY=-1,sensAnim;
+let sensCtx2, sensT, sMX=-1, sMY=-1, sensAnim;
 function initSensCanvas(){
   if(sensAnim) cancelAnimationFrame(sensAnim);
-  const sc=document.getElementById('sensCanvas');
-  sc.width=sc.parentElement.clientWidth-40; sc.height=180;
-  sensCtx2=sc.getContext('2d');
-  const gY=sc.height*.72;
-  sensT={x:sc.width/2,foot:gY,vx:1.5};
-  sc.addEventListener('mousemove',e=>{const r=sc.getBoundingClientRect();sMX=(e.clientX-r.left)*(sc.width/r.width);sMY=(e.clientY-r.top)*(sc.height/r.height);});
+  const sc = document.getElementById('sensCanvas');
+  sc.width = sc.parentElement.clientWidth - 40; sc.height = 180;
+  sensCtx2 = sc.getContext('2d');
+  const gY = sc.height * 0.72;
+  sensT = {x: sc.width/2, foot: gY, vx: 1.5};
+  sc.addEventListener('mousemove', e => {
+    const r = sc.getBoundingClientRect();
+    sMX = (e.clientX - r.left) * (sc.width / r.width);
+    sMY = (e.clientY - r.top)  * (sc.height / r.height);
+  });
   (function loop(){
-    const w=sc.width,h=sc.height,gY2=sensT.foot;
-    sensCtx2.fillStyle='#0a0e1a';sensCtx2.fillRect(0,0,w,h);
-    sensCtx2.fillStyle='#1a2a14';sensCtx2.fillRect(0,gY2,w,h-gY2);
-    sensCtx2.strokeStyle='rgba(80,130,50,.35)';sensCtx2.lineWidth=1;
-    sensCtx2.beginPath();sensCtx2.moveTo(0,gY2);sensCtx2.lineTo(w,gY2);sensCtx2.stroke();
-    sensT.x+=sensT.vx; if(sensT.x<30||sensT.x>w-30)sensT.vx*=-1;
-    const tx=sensT.x,hy=gY2-58,s=.8;
-    sensCtx2.fillStyle='#4a7a5a';sensCtx2.beginPath();sensCtx2.roundRect(tx-10,hy+12,20,30,3);sensCtx2.fill();
-    sensCtx2.fillStyle='#c8a882';sensCtx2.beginPath();sensCtx2.arc(tx,hy,9,0,Math.PI*2);sensCtx2.fill();
-    if(sMX>0){
-      sensCtx2.strokeStyle='rgba(0,212,255,.25)';sensCtx2.setLineDash([4,6]);
-      sensCtx2.beginPath();sensCtx2.moveTo(sMX,sMY);sensCtx2.lineTo(tx,hy);sensCtx2.stroke();sensCtx2.setLineDash([]);
-      sensCtx2.fillStyle='#00d4ff';sensCtx2.shadowColor='#00d4ff';sensCtx2.shadowBlur=7;
-      sensCtx2.beginPath();sensCtx2.arc(sMX,sMY,4,0,Math.PI*2);sensCtx2.fill();sensCtx2.shadowBlur=0;
+    const w=sc.width, h=sc.height, gY2=sensT.foot;
+    sensCtx2.fillStyle='#0a0e1a'; sensCtx2.fillRect(0,0,w,h);
+    sensCtx2.fillStyle='#1a2a14'; sensCtx2.fillRect(0,gY2,w,h-gY2);
+    sensCtx2.strokeStyle='rgba(80,130,50,.35)'; sensCtx2.lineWidth=1;
+    sensCtx2.beginPath(); sensCtx2.moveTo(0,gY2); sensCtx2.lineTo(w,gY2); sensCtx2.stroke();
+    sensT.x += sensT.vx; if(sensT.x<30||sensT.x>w-30) sensT.vx*=-1;
+    const tx=sensT.x, s=0.8;
+    const tHeadR=9*s, tTorsoH=35*s, tLegH=45*s;
+    const tFoot=gY2, tHeadCY=tFoot-tLegH-tTorsoH-tHeadR;
+    sensCtx2.fillStyle='#4a7a5a';
+    sensCtx2.beginPath();
+    sensCtx2.moveTo(tx-12*s, tHeadCY+tHeadR*2);
+    sensCtx2.lineTo(tx+12*s, tHeadCY+tHeadR*2);
+    sensCtx2.lineTo(tx+9*s, tHeadCY+tHeadR*2+tTorsoH);
+    sensCtx2.lineTo(tx-9*s, tHeadCY+tHeadR*2+tTorsoH);
+    sensCtx2.closePath(); sensCtx2.fill();
+    sensCtx2.fillStyle='#c8a882';
+    sensCtx2.beginPath(); sensCtx2.arc(tx, tHeadCY, tHeadR, 0, Math.PI*2); sensCtx2.fill();
+    if(sMX > 0){
+      sensCtx2.strokeStyle='rgba(0,212,255,.25)'; sensCtx2.setLineDash([4,6]);
+      sensCtx2.beginPath(); sensCtx2.moveTo(sMX,sMY); sensCtx2.lineTo(tx,tHeadCY); sensCtx2.stroke();
+      sensCtx2.setLineDash([]);
+      sensCtx2.fillStyle='#00d4ff'; sensCtx2.shadowColor='#00d4ff'; sensCtx2.shadowBlur=7;
+      sensCtx2.beginPath(); sensCtx2.arc(sMX,sMY,4,0,Math.PI*2); sensCtx2.fill();
+      sensCtx2.shadowBlur=0;
     }
-    sensAnim=requestAnimationFrame(loop);
+    sensAnim = requestAnimationFrame(loop);
   })();
   updateSens();
 }
 
 function updateSens(){
-  const dpi=+document.getElementById('dpi').value;
-  const igs=+document.getElementById('igs').value;
-  const ads=+document.getElementById('ads').value;
-  document.getElementById('dpi-val').textContent=dpi;
-  document.getElementById('igs-val').textContent=igs;
-  document.getElementById('ads-val').textContent=ads.toFixed(2);
-  const eDPI=dpi*(igs/100)*2;
-  const cm360=(2.54*360)/(eDPI*0.022);
-  document.getElementById('cm360').textContent=cm360.toFixed(1);
-  document.getElementById('conv-delta').textContent=igs;
-  document.getElementById('conv-cs').textContent=(eDPI/dpi/3.18).toFixed(2);
-  document.getElementById('conv-val').textContent=(eDPI/dpi/3.18*1.2).toFixed(2);
-  document.getElementById('conv-pubg').textContent=Math.round(igs*.8);
-  document.getElementById('conv-apex').textContent=(eDPI/dpi/3.18*1.5).toFixed(2);
-  document.getElementById('conv-ow').textContent=(eDPI/dpi/3.18*10.6).toFixed(1);
+  const dpi = +document.getElementById('dpi').value;
+  const igs = +document.getElementById('igs').value;
+  const ads = +document.getElementById('ads').value;
+  document.getElementById('dpi-val').textContent = dpi;
+  document.getElementById('igs-val').textContent = igs;
+  document.getElementById('ads-val').textContent = ads.toFixed(2);
+  const eDPI  = dpi * (igs/100) * 2;
+  const cm360 = (2.54 * 360) / (eDPI * 0.022);
+  document.getElementById('cm360').textContent     = cm360.toFixed(1);
+  document.getElementById('conv-delta').textContent = igs;
+  document.getElementById('conv-cs').textContent    = (eDPI/dpi/3.18).toFixed(2);
+  document.getElementById('conv-val').textContent   = (eDPI/dpi/3.18*1.2).toFixed(2);
+  document.getElementById('conv-pubg').textContent  = Math.round(igs*0.8);
+  document.getElementById('conv-apex').textContent  = (eDPI/dpi/3.18*1.5).toFixed(2);
+  document.getElementById('conv-ow').textContent    = (eDPI/dpi/3.18*10.6).toFixed(1);
 }
 
 // ── 统计 ──
 function saveRecord(r){
-  const h=JSON.parse(localStorage.getItem('aimtrainer_v3')||'[]');
-  h.unshift(r); if(h.length>50)h.pop();
-  localStorage.setItem('aimtrainer_v3',JSON.stringify(h));
+  const h = JSON.parse(localStorage.getItem('aimtrainer_v3') || '[]');
+  h.unshift(r); if(h.length > 50) h.pop();
+  localStorage.setItem('aimtrainer_v3', JSON.stringify(h));
 }
 function renderStats(){
-  const h=JSON.parse(localStorage.getItem('aimtrainer_v3')||'[]');
-  document.getElementById('s-total').textContent=h.length;
+  const h = JSON.parse(localStorage.getItem('aimtrainer_v3') || '[]');
+  document.getElementById('s-total').textContent = h.length;
   if(h.length){
-    document.getElementById('s-avgacc').textContent=Math.round(h.reduce((a,b)=>a+b.acc,0)/h.length)+'%';
-    const rts=h.filter(r=>r.avgRt>0);
-    document.getElementById('s-avgrt').textContent=rts.length?Math.round(rts.reduce((a,b)=>a+b.avgRt,0)/rts.length)+'ms':'-';
-    document.getElementById('s-combo').textContent=Math.max(...h.map(r=>r.combo));
+    document.getElementById('s-avgacc').textContent = Math.round(h.reduce((a,b)=>a+b.acc,0)/h.length) + '%';
+    const rts = h.filter(r => r.avgRt > 0);
+    document.getElementById('s-avgrt').textContent = rts.length
+      ? Math.round(rts.reduce((a,b)=>a+b.avgRt,0)/rts.length) + 'ms' : '-';
+    document.getElementById('s-combo').textContent = Math.max(...h.map(r=>r.combo));
   }
-  const tbody=document.getElementById('history-body');
-  if(!h.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:22px">暂无记录 🎯</td></tr>';return;}
-  const mn={patrol:'巡逻',sprint:'冲刺',peek:'探头',multi:'多目标'};
-  tbody.innerHTML=h.map(r=>`<tr>
-    <td>${r.time}</td><td>${mn[r.mode]||r.mode}</td><td>${r.kills||0}</td>
-    <td>${r.acc}%</td><td style="color:#ffd700">${r.hs||0}%</td>
-    <td>${r.avgRt||'-'}ms</td><td>x${r.combo}</td>
+  const tbody = document.getElementById('history-body');
+  if(!h.length){
+    tbody.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:22px">暂无记录 🎯</td></tr>';
+    return;
+  }
+  const mn = {patrol:'巡逻', sprint:'冲刺', peek:'探头', multi:'多目标'};
+  tbody.innerHTML = h.map(r => `<tr>
+    <td>${r.time}</td>
+    <td>${mn[r.mode]||r.mode}</td>
+    <td>${r.kills||0}</td>
+    <td>${r.acc}%</td>
+    <td style="color:#ffd700">${r.hs||0}%</td>
+    <td>${r.avgRt||'-'}ms</td>
+    <td>x${r.combo}</td>
     <td><span class="tag tag-${r.grade.toLowerCase()}">${r.grade}</span></td>
   </tr>`).join('');
 }
 function clearHistory(){
-  if(confirm('确定清除所有训练记录？')){localStorage.removeItem('aimtrainer_v3');renderStats();}
+  if(confirm('确定清除所有训练记录？')){
+    localStorage.removeItem('aimtrainer_v3'); renderStats();
+  }
 }
 </script>
 </body>

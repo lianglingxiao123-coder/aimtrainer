@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🎯 三角洲练枪训练营 v1.4</title>
+<title>🎯 三角洲练枪训练营 v1.5</title>
 <style>
   :root {
     --bg: #0a0e1a; --panel: #111827; --border: #1f2937;
@@ -114,7 +114,7 @@
 <body>
 
 <header>
-  <div class="logo">🎯 <span>三角洲</span> 练枪训练营 <small style="font-size:11px;opacity:.6;font-weight:400">v1.4</small></div>
+  <div class="logo">🎯 <span>三角洲</span> 练枪训练营 <small style="font-size:11px;opacity:.6;font-weight:400">v1.5</small></div>
   <div class="nav-tabs">
     <button class="nav-tab active" onclick="switchPage('arena',this)">🎮 训练场</button>
     <button class="nav-tab" onclick="switchPage('sens',this)">⚙️ 灵敏度</button>
@@ -267,13 +267,42 @@ function resize(){
 resize();
 window.addEventListener('resize', resize);
 
-// ── 后坐力状态（必须在 syncCrosshair 调用之前声明）──
-let recoilY = 0;          // 当前累计后坐力（像素，准星向上偏移）
-let recoilX = 0;          // 水平抖动
-const RECOIL_PER_SHOT = 18;   // 每发上跳像素（提升，持续按住会明显上飘）
-const RECOIL_HORIZ    = 6.0;  // 水平随机抖动幅度
-const RECOIL_RECOVERY = 140;  // 每秒恢复像素（恢复变慢，让后坐力更压迫）
-const RECOIL_MAX      = 200;  // 最大累积（上限大幅提升）
+// ── 后坐力系统（CS2/三角洲风格 Spray Pattern）──
+// 弹道序列：[offsetX, offsetY] 像素（相对于初始准星位置）
+// Y 正值 = 向上，X 正负 = 左右摆动
+// 参考 CS2 AK47 节奏：前3发稳定，4-10发快速上扬，后续左右摆动
+const SPRAY_PATTERN = [
+  [  0,   0],  // 1
+  [  1,  12],  // 2
+  [ -1,  26],  // 3
+  [  3,  44],  // 4
+  [  5,  64],  // 5
+  [  2,  86],  // 6
+  [ -3, 108],  // 7
+  [ -7, 126],  // 8
+  [-10, 138],  // 9
+  [ -8, 148],  // 10
+  [ -4, 154],  // 11
+  [  2, 158],  // 12
+  [  7, 160],  // 13
+  [  9, 158],  // 14
+  [  7, 154],  // 15
+  [  3, 148],  // 16
+  [ -2, 142],  // 17
+  [ -6, 136],  // 18
+  [ -5, 130],  // 19
+  [  0, 125],  // 20+（循环最后一帧）
+];
+
+let recoilY = 0;         // 当前准星视觉 Y 偏移（平滑插值中间值）
+let recoilX = 0;         // 当前准星视觉 X 偏移
+let recoilTargetY = 0;   // 目标 Y（来自 spray pattern）
+let recoilTargetX = 0;   // 目标 X
+let shotIndex = 0;       // 已射击弹数（pattern 索引）
+let resetTimer = null;   // 松手后重置计时器
+const RECOIL_LERP     = 22;  // 准星视觉追踪速度（越大越跟手）
+const RESET_DELAY_MS  = 300; // 松手后 N ms 重置弹道序列
+const RANDOM_SPREAD   = 2.5; // 每发额外随机散布（像素）
 
 // ── 准星 ──
 let mouseX = 0, mouseY = 0;
@@ -758,7 +787,7 @@ function toggleGame(){ GS.running ? stopGame() : startGame(); }
 function startGame(){
   document.getElementById('start-overlay').style.display = 'none';
   document.getElementById('result-modal').classList.remove('show');
-  recoilY = 0; recoilX = 0;
+  recoilY = 0; recoilX = 0; recoilTargetY = 0; recoilTargetX = 0; shotIndex = 0; if(resetTimer){ clearTimeout(resetTimer); resetTimer = null; }
   Object.assign(GS, {
     running:true, kills:0, hits:0, misses:0, headshots:0,
     combo:0, maxCombo:0, shotsFired:0, reactionTimes:[],
@@ -791,10 +820,10 @@ function gameLoop(ts){
   const dt = Math.min((ts - GS.lastFrame) / 1000, 0.05);
   GS.lastFrame = ts;
 
-  // 后坐力恢复
-  const recovDt = RECOIL_RECOVERY * dt;
-  recoilY = Math.max(0, recoilY - recovDt);
-  recoilX = recoilX * (1 - dt * 8); // 水平快速衰减
+  // 后坐力视觉平滑插值（准星跟随 target 值）
+  const lerpFactor = 1 - Math.pow(1 - Math.min(RECOIL_LERP * dt, 0.99), 1);
+  recoilY += (recoilTargetY - recoilY) * lerpFactor;
+  recoilX += (recoilTargetX - recoilX) * lerpFactor;
 
   GS.targets.forEach(t => t.update(dt));
   GS.targets = GS.targets.filter(t => t.alive);
@@ -825,15 +854,28 @@ function drawCover(){
 function doShoot(){
   if(!GS.running) return;
 
-  // 累加后坐力
-  recoilY = Math.min(RECOIL_MAX, recoilY + RECOIL_PER_SHOT);
-  recoilX += (Math.random() - 0.5) * 2 * RECOIL_HORIZ;
+  // Spray Pattern 后坐力：按弹数索引取预定义偏移
+  const pidx = Math.min(shotIndex, SPRAY_PATTERN.length - 1);
+  const [px, py] = SPRAY_PATTERN[pidx];
+  // 加入少量随机散布（模拟真实枪械）
+  recoilTargetX = px + (Math.random() - 0.5) * 2 * RANDOM_SPREAD;
+  recoilTargetY = py + (Math.random() - 0.5) * RANDOM_SPREAD * 0.5;
+  shotIndex++;
 
-  // 实际射击位置 = 准星 + 后坐力偏移
+  // 松手重置计时器：每次射击重启
+  if(resetTimer) clearTimeout(resetTimer);
+  resetTimer = setTimeout(() => {
+    shotIndex = 0;
+    recoilTargetY = 0;
+    recoilTargetX = 0;
+    resetTimer = null;
+  }, RESET_DELAY_MS);
+
+  // 实际射击位置 = 准星物理位置 + 弹道偏移（X/Y 单独 scale）
   const rect = canvas.getBoundingClientRect();
   const scaleX = W / rect.width, scaleY = H / rect.height;
-  const cx = mouseX * scaleX + recoilX;
-  const cy = mouseY * scaleY - recoilY;
+  const cx = mouseX * scaleX + recoilX * scaleX;
+  const cy = mouseY * scaleY - recoilY * scaleY;
 
   GS.shotsFired++;
 

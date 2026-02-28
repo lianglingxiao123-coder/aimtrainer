@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🎯 三角洲练枪训练营 v1.2</title>
+<title>🎯 三角洲练枪训练营 v1.3</title>
 <style>
   :root {
     --bg: #0a0e1a; --panel: #111827; --border: #1f2937;
@@ -114,7 +114,7 @@
 <body>
 
 <header>
-  <div class="logo">🎯 <span>三角洲</span> 练枪训练营 <small style="font-size:11px;opacity:.6;font-weight:400">v1.2</small></div>
+  <div class="logo">🎯 <span>三角洲</span> 练枪训练营 <small style="font-size:11px;opacity:.6;font-weight:400">v1.3</small></div>
   <div class="nav-tabs">
     <button class="nav-tab active" onclick="switchPage('arena',this)">🎮 训练场</button>
     <button class="nav-tab" onclick="switchPage('sens',this)">⚙️ 灵敏度</button>
@@ -124,7 +124,8 @@
 
 <div id="arena-page" class="page active">
   <div class="arena-hud">
-    <div class="hud-item"><span class="hud-label">击杀</span><span class="hud-value green" id="hud-kills">0</span></div>
+    <div class="hud-item"><span class="hud-label">✅ 击杀</span><span class="hud-value green" id="hud-kills">0</span></div>
+    <div class="hud-item"><span class="hud-label">💨 漏掉</span><span class="hud-value red" id="hud-escaped">0</span></div>
     <div class="hud-item"><span class="hud-label">命中</span><span class="hud-value green" id="hud-hits">0</span></div>
     <div class="hud-item"><span class="hud-label">未命中</span><span class="hud-value red" id="hud-miss">0</span></div>
     <div class="hud-item"><span class="hud-label">命中率</span><span class="hud-value" id="hud-acc">-</span></div>
@@ -133,8 +134,7 @@
     <div class="hud-item"><span class="hud-label">剩余</span><span class="hud-value" id="hud-time">60s</span></div>
     <div class="hud-sep"></div>
     <div class="mode-selector">
-      <button class="mode-btn active" id="btn-patrol" onclick="setMode('patrol')">巡逻</button>
-      <button class="mode-btn" id="btn-sprint" onclick="setMode('sprint')">冲刺</button>
+      <button class="mode-btn active" id="btn-sprint" onclick="setMode('sprint')">冲刺</button>
       <button class="mode-btn" id="btn-peek" onclick="setMode('peek')">探头</button>
       <button class="mode-btn" id="btn-multi" onclick="setMode('multi')">多目标</button>
     </div>
@@ -350,6 +350,8 @@ class Target {
   constructor(mode){
     this.mode = mode;
     this.alive = true; this.dying = false; this.dyingTimer = 0;
+    // dyingReason: 'killed'(被击杀→红) | 'timeout'(超时→蓝)
+    this.dyingReason = 'killed';
     this.hp = HP_MAX; this.maxHp = HP_MAX;
     this.born = Date.now();
     this.hits = 0; this.headshots = 0;
@@ -368,6 +370,8 @@ class Target {
     this.waistW    = this.shoulderW * WAIST_W_RATIO;
     this.armW      = this.headR * 2 * ARM_W_RATIO;
     this.legW      = this.headR * 2 * LEG_W_RATIO;
+    // 脖子高度（比 headR 短：仅 0.4 倍头半径）
+    this.neckH     = this.headR * 0.4;
 
     // 脚的 Y 坐标（近大远小，远的靠近地平线）
     const gY   = H * GROUND_RATIO;
@@ -385,20 +389,20 @@ class Target {
       this.dir = Math.random() < 0.5 ? 1 : -1;
     }
 
-    // 速度
-    const speedRanges = {patrol:[70,160], sprint:[180,340], peek:[0,0], multi:[90,250]};
-    const [mn, mx] = speedRanges[mode] || [100,200];
+    // 速度（去掉 patrol，默认用 sprint 范围）
+    const speedRanges = {sprint:[180,340], peek:[0,0], multi:[90,250]};
+    const [mn, mx] = speedRanges[mode] || [180,340];
     this.speed = (mn + Math.random() * (mx - mn)) * s;
 
-    // 折返
-    this.lastReverseTime  = Date.now() + Math.random() * 600;
-    this.reverseCooldown  = 700 + Math.random() * 1000;
-    this.reverseChance    = 0.010; // 每帧约1%，约1.5~2秒一次
+    // 折返：概率提升（约每0.6~1.2秒一次）
+    this.lastReverseTime  = Date.now() + Math.random() * 400;
+    this.reverseCooldown  = 400 + Math.random() * 700;
+    this.reverseChance    = 0.025; // 提升至2.5%/帧
 
-    // 跳跃
+    // 跳跃：概率提升，冷却缩短
     this.vy = 0; this.jumping = false;
-    this.lastJumpTime  = Date.now() + Math.random() * 2000;
-    this.jumpCooldown  = 1200 + Math.random() * 3000;
+    this.lastJumpTime  = Date.now() + Math.random() * 1000;
+    this.jumpCooldown  = 600 + Math.random() * 1500;  // 原1200~4200，现600~2100
 
     // 探头模式
     if(mode === 'peek'){
@@ -419,9 +423,9 @@ class Target {
     };
   }
 
-  // 关键 Y 坐标
-  get headCY(){ return this.footY - this.legH - this.torsoH - this.headR; }
-  get shoulderY(){ return this.headCY + this.headR * 2 + 1 * this.scale; }
+  // 关键 Y 坐标（脖子缩短：shoulderY 更靠近头）
+  get headCY(){ return this.footY - this.legH - this.torsoH - this.neckH - this.headR; }
+  get shoulderY(){ return this.headCY + this.headR + this.neckH; }
   get hipY(){ return this.shoulderY + this.torsoH; }
   get kneeY(){ return this.hipY + this.legH * 0.52; }
 
@@ -429,23 +433,28 @@ class Target {
     if(!this.alive) return;
     if(this.dying){
       this.dyingTimer += dt * 1000;
-      if(this.dyingTimer > 320) this.alive = false;
+      if(this.dyingTimer > 380){
+        // 超时消失时，通知 GS 计数
+        if(this.dyingReason === 'timeout') GS.escaped++;
+        this.alive = false;
+      }
       return;
     }
-    // 超时消失
+    // 超时消失（蓝色）
     if(Date.now() - this.born > TARGET_LIFETIME){
       this.dying = true; this.dyingTimer = 0;
+      this.dyingReason = 'timeout';
       return;
     }
 
-    // 跳跃
+    // 跳跃（概率提升：0.025/帧约每0.7~1.5秒一次）
     const now = Date.now();
     if(!this.jumping && now - this.lastJumpTime > this.jumpCooldown && this.mode !== 'peek'){
-      if(Math.random() < 0.012){
+      if(Math.random() < 0.025){
         this.jumping = true;
-        this.vy = -(300 + Math.random() * 160) * this.scale;
+        this.vy = -(320 + Math.random() * 200) * this.scale;
         this.lastJumpTime = now;
-        this.jumpCooldown = 1500 + Math.random() * 3500;
+        this.jumpCooldown = 600 + Math.random() * 1500;
       }
     }
     if(this.jumping){
@@ -456,7 +465,7 @@ class Target {
       }
     }
 
-    this.walkPhase += dt * (this.mode === 'sprint' ? 14 : 8);
+    this.walkPhase += dt * 14; // 统一冲刺步频
 
     // 水平移动
     if(this.mode === 'peek'){
@@ -472,11 +481,11 @@ class Target {
         if(gone) this.alive = false;
       }
     } else {
-      // 随机折返
+      // 随机折返（概率提升）
       if(now - this.lastReverseTime > this.reverseCooldown && Math.random() < this.reverseChance){
         this.dir *= -1;
         this.lastReverseTime = now;
-        this.reverseCooldown = 600 + Math.random() * 1200;
+        this.reverseCooldown = 400 + Math.random() * 700;
       }
       this.x += this.dir * this.speed * dt;
       if(this.x < -100 || this.x > W + 100) this.alive = false;
@@ -486,23 +495,29 @@ class Target {
   draw(ctx){
     if(!this.alive) return;
     const x = this.x, s = this.scale;
-    const headCY   = this.headCY;
+    const headCY    = this.headCY;
     const shoulderY = this.shoulderY;
-    const hipY     = this.hipY;
-    const kneeY    = this.kneeY;
-    const foot     = this.footY;
-    const gd       = this.dir; // 朝向
-    const alpha    = this.dying ? Math.max(0, 1 - this.dyingTimer/320) : 1;
-    const flash    = this.dying || (this.hp < 50 && Math.floor(Date.now()/120) % 2 === 0);
+    const hipY      = this.hipY;
+    const kneeY     = this.kneeY;
+    const foot      = this.footY;
+    const gd        = this.dir;
+    const alpha     = this.dying ? Math.max(0, 1 - this.dyingTimer/380) : 1;
+
+    // 颜色主题：正常/低血闪烁/被击杀(红)/超时(蓝)
+    const lowFlash = !this.dying && this.hp < 50 && Math.floor(Date.now()/120) % 2 === 0;
+    let tintColor = null;
+    if(this.dying && this.dyingReason === 'killed')  tintColor = '#ff3366';
+    if(this.dying && this.dyingReason === 'timeout') tintColor = '#00aaff';
+    if(lowFlash) tintColor = '#ff3366';
 
     ctx.save();
     ctx.globalAlpha = alpha;
 
-    const skinC   = flash ? '#ff3366' : this.color.skin;
-    const torsoC  = flash ? '#ff3366' : this.color.torso;
-    const pantsC  = flash ? '#ff3366' : this.color.pants;
-    const bootsC  = flash ? '#ff3366' : this.color.boots;
-    const helmC   = flash ? '#ff3366' : this.color.helmet;
+    const skinC  = tintColor || this.color.skin;
+    const torsoC = tintColor || this.color.torso;
+    const pantsC = tintColor || this.color.pants;
+    const bootsC = tintColor || this.color.boots;
+    const helmC  = tintColor || this.color.helmet;
 
     // 阴影
     ctx.fillStyle = 'rgba(0,0,0,.2)';
@@ -575,7 +590,7 @@ class Target {
     ctx.strokeStyle = skinC;
     ctx.beginPath(); ctx.moveTo(x - gd*elbowOff*0.4, armY1 + elbowOff - armSwing*s); ctx.lineTo(x - gd*elbowOff*0.1, armY1 + elbowOff + wristOff*0.55 - armSwing*s); ctx.stroke();
 
-    // ── 脖子 ──
+    // ── 脖子（短）──
     ctx.strokeStyle = skinC; ctx.lineWidth = this.headR * 0.55; ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(x, shoulderY); ctx.lineTo(x, headCY + this.headR); ctx.stroke();
 
@@ -631,6 +646,7 @@ class Target {
     this.hits++;
     if(this.hp <= 0 && !this.dying){
       this.dying = true; this.dyingTimer = 0;
+      this.dyingReason = 'killed';
       return true;
     }
     return false;
@@ -639,8 +655,9 @@ class Target {
 
 // ── 游戏状态 ──
 let GS = {
-  running: false, mode: 'patrol',
+  running: false, mode: 'sprint',
   kills: 0, hits: 0, misses: 0, headshots: 0, combo: 0, maxCombo: 0,
+  escaped: 0,
   shotsFired: 0, reactionTimes: [],
   timeLeft: 60, targets: [], animFrame: null, timer: null, spawnInterval: null,
   lastFrame: 0,
@@ -679,12 +696,13 @@ function startGame(){
   Object.assign(GS, {
     running:true, kills:0, hits:0, misses:0, headshots:0,
     combo:0, maxCombo:0, shotsFired:0, reactionTimes:[],
+    escaped:0,
     timeLeft:60, targets:[], lastFrame:performance.now(),
   });
   const btn = document.getElementById('startBtn');
   btn.textContent = '⏹ 停止'; btn.classList.add('stop');
   updateHUD(); spawnTargets();
-  const ms = {patrol:2200, sprint:1600, peek:2000, multi:1200}[GS.mode] || 2000;
+  const ms = {sprint:1600, peek:2000, multi:1200}[GS.mode] || 1600;
   GS.spawnInterval = setInterval(spawnTargets, ms);
   GS.timer = setInterval(() => {
     GS.timeLeft--;
@@ -697,7 +715,7 @@ function startGame(){
 function spawnTargets(){
   if(!GS.running) return;
   GS.targets = GS.targets.filter(t => t.alive);
-  const max = {patrol:1, sprint:1, peek:1, multi:3}[GS.mode] || 1;
+  const max = {sprint:1, peek:1, multi:3}[GS.mode] || 1;
   const need = max - GS.targets.length;
   for(let i = 0; i < need; i++) GS.targets.push(new Target(GS.mode));
 }
@@ -714,6 +732,8 @@ function gameLoop(ts){
 
   GS.targets.forEach(t => t.update(dt));
   GS.targets = GS.targets.filter(t => t.alive);
+  // 实时同步漏掉数
+  document.getElementById('hud-escaped').textContent = GS.escaped;
   drawScene();
   GS.animFrame = requestAnimationFrame(gameLoop);
 }
@@ -791,12 +811,13 @@ function updateHUD(){
   const total = GS.hits + GS.misses;
   const acc   = total > 0 ? Math.round(GS.hits / total * 100) + '%' : '-';
   const hs    = GS.hits > 0 ? Math.round(GS.headshots / GS.hits * 100) + '%' : '-';
-  document.getElementById('hud-kills').textContent = GS.kills;
-  document.getElementById('hud-hits').textContent  = GS.hits;
-  document.getElementById('hud-miss').textContent  = GS.misses;
-  document.getElementById('hud-acc').textContent   = acc;
-  document.getElementById('hud-hs').textContent    = hs;
-  document.getElementById('hud-combo').textContent = 'x' + GS.combo;
+  document.getElementById('hud-kills').textContent   = GS.kills;
+  document.getElementById('hud-escaped').textContent = GS.escaped;
+  document.getElementById('hud-hits').textContent    = GS.hits;
+  document.getElementById('hud-miss').textContent    = GS.misses;
+  document.getElementById('hud-acc').textContent     = acc;
+  document.getElementById('hud-hs').textContent      = hs;
+  document.getElementById('hud-combo').textContent   = 'x' + GS.combo;
 }
 
 function stopGame(showResult=true){
@@ -841,6 +862,7 @@ function showResultModal(){
   document.getElementById('result-body').innerHTML = `
     <div class="result-row"><span>模式</span><span class="val">${mn[GS.mode]}</span></div>
     <div class="result-row"><span>总击杀</span><span class="val">${GS.kills}</span></div>
+    <div class="result-row"><span>💨 漏掉</span><span class="val" style="color:var(--red)">${GS.escaped}</span></div>
     <div class="result-row"><span>击杀/分钟</span><span class="val" style="color:${gc}">${killsPerMin}</span></div>
     <div class="result-row"><span>命中 / 射击</span><span class="val">${GS.hits} / ${total}</span></div>
     <div class="result-row"><span>命中率</span><span class="val">${acc}%</span></div>
@@ -945,7 +967,7 @@ function renderStats(){
     tbody.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:22px">暂无记录 🎯</td></tr>';
     return;
   }
-  const mn = {patrol:'巡逻', sprint:'冲刺', peek:'探头', multi:'多目标'};
+  const mn = {sprint:'冲刺', peek:'探头', multi:'多目标'};
   tbody.innerHTML = h.map(r => `<tr>
     <td>${r.time}</td>
     <td>${mn[r.mode]||r.mode}</td>

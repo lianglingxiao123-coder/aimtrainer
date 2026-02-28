@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎯 三角洲练枪训练营</title>
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --panel: #111827;
+    --border: #1f2937;
+    --accent: #00d4ff;
+    --accent2: #ff6b35;
+    --green: #00ff88;
+    --red: #ff3366;
+    --text: #e2e8f0;
+    --muted: #64748b;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ===== HEADER ===== */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+  }
+  .logo { font-size: 20px; font-weight: 700; color: var(--accent); letter-spacing: 1px; }
+  .logo span { color: var(--accent2); }
+  .nav-tabs { display: flex; gap: 4px; }
+  .nav-tab {
+    padding: 8px 20px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+  .nav-tab:hover { color: var(--text); background: var(--border); }
+  .nav-tab.active { background: var(--accent); color: #000; font-weight: 700; }
+
+  /* ===== PAGES ===== */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ===== ARENA ===== */
+  #arena-page { height: calc(100vh - 57px); display: none; flex-direction: column; }
+  #arena-page.active { display: flex; }
+
+  .arena-hud {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 10px 24px;
+    background: rgba(0,0,0,0.4);
+    border-bottom: 1px solid var(--border);
+  }
+  .hud-item { display: flex; flex-direction: column; align-items: center; }
+  .hud-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  .hud-value { font-size: 22px; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .hud-value.red { color: var(--red); }
+  .hud-value.green { color: var(--green); }
+  .hud-sep { flex: 1; }
+
+  .mode-selector { display: flex; gap: 8px; }
+  .mode-btn {
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+  }
+  .mode-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .mode-btn.active { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 600; }
+
+  .start-btn {
+    padding: 8px 24px;
+    border-radius: 8px;
+    border: none;
+    background: var(--green);
+    color: #000;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .start-btn:hover { filter: brightness(1.2); transform: scale(1.03); }
+  .start-btn.stop { background: var(--red); }
+
+  #canvas-wrap {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    cursor: crosshair;
+    background: radial-gradient(ellipse at center, #0d1f2d 0%, #080d14 100%);
+  }
+  #gameCanvas { width: 100%; height: 100%; display: block; }
+
+  /* 准星 */
+  #crosshair {
+    position: absolute;
+    pointer-events: none;
+    width: 20px;
+    height: 20px;
+    transform: translate(-50%, -50%);
+    display: none;
+  }
+  #canvas-wrap:hover #crosshair { display: block; }
+
+  /* 开始提示 */
+  #start-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
+    gap: 16px;
+  }
+  #start-overlay h2 { font-size: 32px; color: var(--accent); }
+  #start-overlay p { color: var(--muted); font-size: 16px; }
+  #start-overlay .big-start {
+    margin-top: 8px;
+    padding: 14px 48px;
+    border-radius: 12px;
+    border: none;
+    background: var(--green);
+    color: #000;
+    font-weight: 800;
+    font-size: 18px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+  #start-overlay .big-start:hover { filter: brightness(1.2); transform: scale(1.05); }
+
+  /* 结算弹窗 */
+  #result-modal {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(6px);
+  }
+  #result-modal.show { display: flex; }
+  .result-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px 40px;
+    min-width: 320px;
+    text-align: center;
+  }
+  .result-card h2 { font-size: 24px; margin-bottom: 20px; color: var(--accent); }
+  .result-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 15px;
+  }
+  .result-row:last-of-type { border: none; }
+  .result-row .val { font-weight: 700; color: var(--green); }
+  .result-actions { display: flex; gap: 12px; margin-top: 20px; justify-content: center; }
+  .result-actions button {
+    padding: 10px 24px;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+  .btn-retry { background: var(--green); color: #000; }
+  .btn-retry:hover { filter: brightness(1.1); }
+  .btn-close { background: var(--border); color: var(--text); }
+  .btn-close:hover { background: var(--muted); }
+
+  /* ===== SENSITIVITY PAGE ===== */
+  #sens-page { padding: 32px 40px; max-width: 900px; margin: 0 auto; }
+  #sens-page h2 { font-size: 24px; color: var(--accent); margin-bottom: 8px; }
+  #sens-page .sub { color: var(--muted); margin-bottom: 32px; }
+
+  .sens-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+  .sens-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+  }
+  .sens-card h3 { font-size: 15px; color: var(--muted); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px; }
+  .slider-row { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .slider-row label { display: flex; justify-content: space-between; font-size: 14px; }
+  .slider-row label span { color: var(--accent); font-weight: 600; }
+  input[type=range] {
+    width: 100%;
+    height: 6px;
+    border-radius: 4px;
+    background: var(--border);
+    outline: none;
+    cursor: pointer;
+    -webkit-appearance: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 0 8px var(--accent);
+  }
+
+  #sens-arena {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  #sens-arena h3 { font-size: 15px; color: var(--muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px; }
+  #sensCanvas {
+    width: 100%;
+    height: 240px;
+    border-radius: 8px;
+    cursor: crosshair;
+    display: block;
+    background: #080d14;
+  }
+  .sens-tip {
+    margin-top: 10px;
+    font-size: 13px;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  .sens-convert {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+  }
+  .sens-convert h3 { font-size: 15px; color: var(--muted); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px; }
+  .convert-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .convert-item {
+    background: var(--bg);
+    border-radius: 8px;
+    padding: 14px;
+    text-align: center;
+  }
+  .convert-item .game-name { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .convert-item .sens-val { font-size: 22px; font-weight: 700; color: var(--accent2); }
+  .convert-item .sens-unit { font-size: 11px; color: var(--muted); }
+
+  /* ===== STATS PAGE ===== */
+  #stats-page { padding: 32px 40px; max-width: 900px; margin: 0 auto; }
+  #stats-page h2 { font-size: 24px; color: var(--accent); margin-bottom: 8px; }
+  #stats-page .sub { color: var(--muted); margin-bottom: 32px; }
+
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+  .stat-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+  }
+  .stat-card .s-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .stat-card .s-val { font-size: 28px; font-weight: 800; color: var(--accent); }
+  .stat-card .s-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  .history-table {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .history-table h3 {
+    padding: 16px 20px;
+    font-size: 14px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid var(--border);
+  }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    padding: 10px 16px;
+    text-align: left;
+    font-size: 12px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    background: rgba(255,255,255,0.02);
+  }
+  td {
+    padding: 10px 16px;
+    font-size: 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  tr:last-child td { border: none; }
+  tr:hover td { background: rgba(255,255,255,0.03); }
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .tag-s { background: rgba(0,212,255,0.15); color: var(--accent); }
+  .tag-a { background: rgba(0,255,136,0.15); color: var(--green); }
+  .tag-b { background: rgba(255,107,53,0.15); color: var(--accent2); }
+  .tag-c { background: rgba(100,116,139,0.15); color: var(--muted); }
+
+  .clear-btn {
+    margin-top: 16px;
+    padding: 8px 20px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+  }
+  .clear-btn:hover { border-color: var(--red); color: var(--red); }
+
+  /* 连击提示 */
+  .combo-toast {
+    position: absolute;
+    pointer-events: none;
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--green);
+    text-shadow: 0 0 10px var(--green);
+    animation: floatUp 0.8s ease-out forwards;
+  }
+  @keyframes floatUp {
+    0% { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-50px) scale(1.3); }
+  }
+
+  /* 响应式 */
+  @media (max-width: 640px) {
+    .sens-grid, .stats-grid, .convert-grid { grid-template-columns: 1fr; }
+    #sens-page, #stats-page { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🎯 <span>三角洲</span> 练枪训练营</div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="switchPage('arena')">🎮 训练场</button>
+    <button class="nav-tab" onclick="switchPage('sens')">⚙️ 灵敏度</button>
+    <button class="nav-tab" onclick="switchPage('stats')">📊 数据</button>
+  </div>
+</header>
+
+<!-- ===== 训练场 ===== -->
+<div id="arena-page" class="page active">
+  <div class="arena-hud">
+    <div class="hud-item">
+      <span class="hud-label">命中</span>
+      <span class="hud-value green" id="hud-hits">0</span>
+    </div>
+    <div class="hud-item">
+      <span class="hud-label">未命中</span>
+      <span class="hud-value red" id="hud-miss">0</span>
+    </div>
+    <div class="hud-item">
+      <span class="hud-label">命中率</span>
+      <span class="hud-value" id="hud-acc">-%</span>
+    </div>
+    <div class="hud-item">
+      <span class="hud-label">平均反应</span>
+      <span class="hud-value" id="hud-rt">-ms</span>
+    </div>
+    <div class="hud-item">
+      <span class="hud-label">连击</span>
+      <span class="hud-value" id="hud-combo">x0</span>
+    </div>
+    <div class="hud-item">
+      <span class="hud-label">剩余时间</span>
+      <span class="hud-value" id="hud-time">60s</span>
+    </div>
+    <div class="hud-sep"></div>
+    <div class="mode-selector">
+      <button class="mode-btn active" onclick="setMode('static')" id="btn-static">静态靶</button>
+      <button class="mode-btn" onclick="setMode('moving')" id="btn-moving">移动靶</button>
+      <button class="mode-btn" onclick="setMode('tracking')" id="btn-tracking">追踪</button>
+      <button class="mode-btn" onclick="setMode('flick')" id="btn-flick">闪现</button>
+    </div>
+    <button class="start-btn" id="startBtn" onclick="toggleGame()">开始训练</button>
+  </div>
+
+  <div id="canvas-wrap">
+    <canvas id="gameCanvas"></canvas>
+    <svg id="crosshair" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+      <line x1="10" y1="0" x2="10" y2="7" stroke="#00d4ff" stroke-width="1.5"/>
+      <line x1="10" y1="13" x2="10" y2="20" stroke="#00d4ff" stroke-width="1.5"/>
+      <line x1="0" y1="10" x2="7" y2="10" stroke="#00d4ff" stroke-width="1.5"/>
+      <line x1="13" y1="10" x2="20" y2="10" stroke="#00d4ff" stroke-width="1.5"/>
+      <circle cx="10" cy="10" r="1.5" fill="#00d4ff"/>
+    </svg>
+    <div id="start-overlay">
+      <h2>🎯 三角洲练枪训练营</h2>
+      <p>选择模式，开始提升你的 FPS 技术</p>
+      <p style="font-size:13px;color:#64748b">静态靶 → 移动靶 → 闪现靶 逐步进阶</p>
+      <button class="big-start" onclick="toggleGame()">▶ 开始训练</button>
+    </div>
+    <div id="result-modal">
+      <div class="result-card">
+        <h2>🏆 训练结算</h2>
+        <div id="result-body"></div>
+        <div class="result-actions">
+          <button class="btn-retry" onclick="retryGame()">🔄 再来一局</button>
+          <button class="btn-close" onclick="closeResult()">关闭</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 灵敏度 ===== -->
+<div id="sens-page" class="page">
+  <h2>⚙️ 灵敏度调校</h2>
+  <p class="sub">调整参数，在测试场感受手感，找到最适合你的设置</p>
+
+  <div class="sens-grid">
+    <div class="sens-card">
+      <h3>鼠标设置</h3>
+      <div class="slider-row">
+        <label>DPI <span id="dpi-val">800</span></label>
+        <input type="range" id="dpi" min="400" max="3200" step="100" value="800" oninput="updateSens()">
+      </div>
+      <div class="slider-row">
+        <label>游戏内灵敏度 <span id="igs-val">50</span></label>
+        <input type="range" id="igs" min="1" max="100" value="50" oninput="updateSens()">
+      </div>
+      <div class="slider-row">
+        <label>ADS 倍率 <span id="ads-val">0.80</span></label>
+        <input type="range" id="ads" min="0.3" max="1.0" step="0.05" value="0.8" oninput="updateSens()">
+      </div>
+    </div>
+
+    <div class="sens-card">
+      <h3>360°距离换算</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">旋转360°需要移动鼠标的距离（越小越灵敏）</p>
+      <div style="text-align:center">
+        <div style="font-size:48px;font-weight:800;color:var(--accent)" id="cm360">--</div>
+        <div style="color:var(--muted);margin-top:4px">厘米 / 360°</div>
+      </div>
+      <hr style="border-color:var(--border);margin:16px 0">
+      <div style="font-size:13px;color:var(--muted)">
+        💡 职业玩家参考：<br>
+        &nbsp;&nbsp;低灵敏（精准）：30–50 cm<br>
+        &nbsp;&nbsp;中灵敏（均衡）：20–30 cm<br>
+        &nbsp;&nbsp;高灵敏（快速）：10–20 cm
+      </div>
+    </div>
+  </div>
+
+  <div id="sens-arena">
+    <h3>手感测试场 — 跟踪移动靶（感受当前灵敏度）</h3>
+    <canvas id="sensCanvas"></canvas>
+    <p class="sens-tip">在画布上移动鼠标，追踪移动的靶心 • 蓝点 = 鼠标位置</p>
+  </div>
+
+  <div class="sens-convert">
+    <h3>常见 FPS 游戏换算（相同 eDPI）</h3>
+    <div class="convert-grid">
+      <div class="convert-item">
+        <div class="game-name">三角洲行动</div>
+        <div class="sens-val" id="conv-delta">-</div>
+        <div class="sens-unit">灵敏度</div>
+      </div>
+      <div class="convert-item">
+        <div class="game-name">CSGO / CS2</div>
+        <div class="sens-val" id="conv-cs">-</div>
+        <div class="sens-unit">sensitivity</div>
+      </div>
+      <div class="convert-item">
+        <div class="game-name">Valorant</div>
+        <div class="sens-val" id="conv-val">-</div>
+        <div class="sens-unit">sensitivity</div>
+      </div>
+      <div class="convert-item">
+        <div class="game-name">和平精英</div>
+        <div class="sens-val" id="conv-pubg">-</div>
+        <div class="sens-unit">灵敏度</div>
+      </div>
+      <div class="convert-item">
+        <div class="game-name">Apex Legends</div>
+        <div class="sens-val" id="conv-apex">-</div>
+        <div class="sens-unit">sensitivity</div>
+      </div>
+      <div class="convert-item">
+        <div class="game-name">Overwatch 2</div>
+        <div class="sens-val" id="conv-ow">-</div>
+        <div class="sens-unit">sensitivity</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 数据统计 ===== -->
+<div id="stats-page" class="page">
+  <h2>📊 训练数据</h2>
+  <p class="sub">记录每次训练，追踪你的进步曲线</p>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="s-label">总训练局数</div>
+      <div class="s-val" id="s-total">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-label">平均命中率</div>
+      <div class="s-val" id="s-avgacc">0%</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-label">平均反应时间</div>
+      <div class="s-val" id="s-avgrt">-</div>
+      <div class="s-sub">毫秒</div>
+    </div>
+    <div class="stat-card">
+      <div class="s-label">最高连击</div>
+      <div class="s-val" id="s-combo">0</div>
+    </div>
+  </div>
+
+  <div class="history-table">
+    <h3>📋 训练记录</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>时间</th>
+          <th>模式</th>
+          <th>命中/总数</th>
+          <th>命中率</th>
+          <th>平均反应</th>
+          <th>连击</th>
+          <th>评级</th>
+        </tr>
+      </thead>
+      <tbody id="history-body">
+        <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px">暂无记录，开始你的第一局训练吧 🎯</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <button class="clear-btn" onclick="clearHistory()">🗑️ 清除记录</button>
+</div>
+
+<script>
+// ==================== 页面切换 ====================
+function switchPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(name + '-page').classList.add('active');
+  event.target.classList.add('active');
+  if (name === 'sens') initSensCanvas();
+  if (name === 'stats') renderStats();
+}
+
+// ==================== 训练场 ====================
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const wrap = document.getElementById('canvas-wrap');
+
+let gameState = {
+  running: false,
+  mode: 'static',
+  hits: 0,
+  misses: 0,
+  combo: 0,
+  maxCombo: 0,
+  reactionTimes: [],
+  timeLeft: 60,
+  targets: [],
+  animFrame: null,
+  timer: null,
+  spawnTimer: null,
+};
+
+function resizeCanvas() {
+  canvas.width = wrap.clientWidth;
+  canvas.height = wrap.clientHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+// 移动准星
+wrap.addEventListener('mousemove', e => {
+  const ch = document.getElementById('crosshair');
+  const rect = wrap.getBoundingClientRect();
+  ch.style.left = (e.clientX - rect.left) + 'px';
+  ch.style.top = (e.clientY - rect.top) + 'px';
+});
+
+function setMode(m) {
+  gameState.mode = m;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-' + m).classList.add('active');
+}
+
+function toggleGame() {
+  if (gameState.running) stopGame();
+  else startGame();
+}
+
+function startGame() {
+  document.getElementById('start-overlay').style.display = 'none';
+  gameState.running = true;
+  gameState.hits = 0;
+  gameState.misses = 0;
+  gameState.combo = 0;
+  gameState.maxCombo = 0;
+  gameState.reactionTimes = [];
+  gameState.timeLeft = 60;
+  gameState.targets = [];
+
+  document.getElementById('startBtn').textContent = '⏹ 停止';
+  document.getElementById('startBtn').classList.add('stop');
+  updateHUD();
+
+  spawnTarget();
+  if (gameState.mode === 'moving' || gameState.mode === 'tracking') {
+    gameState.spawnTimer = setInterval(spawnTarget, 1200);
+  }
+
+  gameState.timer = setInterval(() => {
+    gameState.timeLeft--;
+    document.getElementById('hud-time').textContent = gameState.timeLeft + 's';
+    if (gameState.timeLeft <= 0) stopGame(true);
+  }, 1000);
+
+  gameLoop();
+}
+
+function stopGame(showResult = true) {
+  gameState.running = false;
+  clearInterval(gameState.timer);
+  clearInterval(gameState.spawnTimer);
+  cancelAnimationFrame(gameState.animFrame);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  document.getElementById('startBtn').textContent = '开始训练';
+  document.getElementById('startBtn').classList.remove('stop');
+  document.getElementById('hud-time').textContent = '60s';
+
+  if (showResult && (gameState.hits + gameState.misses > 0)) {
+    showResultModal();
+  } else {
+    document.getElementById('start-overlay').style.display = 'flex';
+  }
+}
+
+function retryGame() {
+  closeResult();
+  setTimeout(startGame, 100);
+}
+
+function closeResult() {
+  document.getElementById('result-modal').classList.remove('show');
+  document.getElementById('start-overlay').style.display = 'flex';
+}
+
+function showResultModal() {
+  const total = gameState.hits + gameState.misses;
+  const acc = total > 0 ? Math.round(gameState.hits / total * 100) : 0;
+  const avgRt = gameState.reactionTimes.length > 0
+    ? Math.round(gameState.reactionTimes.reduce((a,b)=>a+b,0)/gameState.reactionTimes.length)
+    : 0;
+  const grade = acc >= 85 ? 'S' : acc >= 70 ? 'A' : acc >= 55 ? 'B' : 'C';
+  const gradeColor = {S:'#00d4ff',A:'#00ff88',B:'#ff6b35',C:'#64748b'}[grade];
+
+  document.getElementById('result-body').innerHTML = `
+    <div class="result-row"><span>模式</span><span class="val">${{static:'静态靶',moving:'移动靶',tracking:'追踪靶',flick:'闪现靶'}[gameState.mode]}</span></div>
+    <div class="result-row"><span>命中 / 总数</span><span class="val">${gameState.hits} / ${total}</span></div>
+    <div class="result-row"><span>命中率</span><span class="val">${acc}%</span></div>
+    <div class="result-row"><span>平均反应时间</span><span class="val">${avgRt}ms</span></div>
+    <div class="result-row"><span>最高连击</span><span class="val">x${gameState.maxCombo}</span></div>
+    <div class="result-row"><span>评级</span><span class="val" style="color:${gradeColor};font-size:24px">${grade}</span></div>
+  `;
+  document.getElementById('result-modal').classList.add('show');
+
+  // 保存记录
+  saveRecord({ acc, avgRt, combo: gameState.maxCombo, grade, hits: gameState.hits, total,
+    mode: gameState.mode, time: new Date().toLocaleString('zh-CN') });
+}
+
+// 生成靶
+function spawnTarget() {
+  if (!gameState.running) return;
+  const margin = 60;
+  const w = canvas.width, h = canvas.height;
+  const size = gameState.mode === 'flick' ? (Math.random() * 15 + 12) : (Math.random() * 20 + 18);
+
+  const target = {
+    x: margin + Math.random() * (w - margin * 2),
+    y: margin + Math.random() * (h - margin * 2),
+    size,
+    born: Date.now(),
+    vx: (Math.random() - 0.5) * 4,
+    vy: (Math.random() - 0.5) * 4,
+    life: gameState.mode === 'flick' ? 600 + Math.random() * 400 : 99999,
+    alpha: 1,
+  };
+
+  if (gameState.mode === 'static') {
+    gameState.targets = [target]; // 只有一个
+  } else if (gameState.mode === 'flick') {
+    gameState.targets = [target];
+  } else {
+    gameState.targets.push(target);
+    if (gameState.targets.length > 4) gameState.targets.shift();
+  }
+}
+
+let trackingTarget = null;
+
+function gameLoop() {
+  if (!gameState.running) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // 绘制网格背景
+  ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < canvas.width; x += 40) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+  }
+  for (let y = 0; y < canvas.height; y += 40) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+  }
+
+  const now = Date.now();
+
+  if (gameState.mode === 'tracking') {
+    // 追踪模式：一个持续移动的靶
+    if (!trackingTarget) {
+      trackingTarget = {
+        x: canvas.width/2, y: canvas.height/2,
+        vx: 2 + Math.random()*2, vy: 1.5 + Math.random()*2
+      };
+    }
+    trackingTarget.x += trackingTarget.vx;
+    trackingTarget.y += trackingTarget.vy;
+    if (trackingTarget.x < 40 || trackingTarget.x > canvas.width-40) trackingTarget.vx *= -1;
+    if (trackingTarget.y < 40 || trackingTarget.y > canvas.height-40) trackingTarget.vy *= -1;
+    drawTarget(trackingTarget.x, trackingTarget.y, 30, 1, now);
+  } else {
+    // 其他模式
+    gameState.targets = gameState.targets.filter(t => {
+      const age = now - t.born;
+      if (gameState.mode === 'moving') {
+        t.x += t.vx; t.y += t.vy;
+        if (t.x < 40 || t.x > canvas.width-40) t.vx *= -1;
+        if (t.y < 40 || t.y > canvas.height-40) t.vy *= -1;
+      }
+      if (age > t.life) {
+        // 超时消失（闪现模式）
+        gameState.misses++;
+        gameState.combo = 0;
+        updateHUD();
+        spawnTarget();
+        return false;
+      }
+      const progress = Math.min(age / t.life, 1);
+      drawTarget(t.x, t.y, t.size, 1 - progress * 0.3, now);
+      return true;
+    });
+  }
+
+  gameState.animFrame = requestAnimationFrame(gameLoop);
+}
+
+function drawTarget(x, y, size, alpha, now) {
+  // 外圈光晕
+  const grd = ctx.createRadialGradient(x, y, 0, x, y, size * 2);
+  grd.addColorStop(0, `rgba(255,107,53,${0.15 * alpha})`);
+  grd.addColorStop(1, 'transparent');
+  ctx.fillStyle = grd;
+  ctx.beginPath();
+  ctx.arc(x, y, size * 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 主圆
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = '#ff6b35';
+  ctx.lineWidth = 2.5;
+  ctx.fillStyle = 'rgba(255,107,53,0.15)';
+  ctx.beginPath();
+  ctx.arc(x, y, size, 0, Math.PI * 2);
+  ctx.fill(); ctx.stroke();
+
+  // 内圈
+  ctx.strokeStyle = 'rgba(255,200,150,0.6)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(x, y, size * 0.5, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // 中心点
+  ctx.fillStyle = '#ff6b35';
+  ctx.beginPath();
+  ctx.arc(x, y, 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.globalAlpha = 1;
+}
+
+// 点击检测
+wrap.addEventListener('click', e => {
+  if (!gameState.running) return;
+  const rect = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
+  const my = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+  if (gameState.mode === 'tracking') {
+    const dx = mx - trackingTarget.x, dy = my - trackingTarget.y;
+    if (Math.sqrt(dx*dx + dy*dy) < 34) {
+      onHit(e.clientX - rect.left, e.clientY - rect.top);
+    } else {
+      onMiss();
+    }
+    return;
+  }
+
+  let hit = false;
+  for (let i = gameState.targets.length - 1; i >= 0; i--) {
+    const t = gameState.targets[i];
+    const dx = mx - t.x, dy = my - t.y;
+    if (Math.sqrt(dx*dx + dy*dy) < t.size + 4) {
+      gameState.reactionTimes.push(Date.now() - t.born);
+      gameState.targets.splice(i, 1);
+      onHit(e.clientX - rect.left, e.clientY - rect.top);
+      if (gameState.mode === 'static' || gameState.mode === 'flick') spawnTarget();
+      hit = true;
+      break;
+    }
+  }
+  if (!hit) onMiss();
+});
+
+function onHit(px, py) {
+  gameState.hits++;
+  gameState.combo++;
+  if (gameState.combo > gameState.maxCombo) gameState.maxCombo = gameState.combo;
+  updateHUD();
+  showComboToast(px, py);
+}
+
+function onMiss() {
+  gameState.misses++;
+  gameState.combo = 0;
+  updateHUD();
+}
+
+function showComboToast(x, y) {
+  if (gameState.combo < 2) return;
+  const el = document.createElement('div');
+  el.className = 'combo-toast';
+  el.textContent = gameState.combo >= 5 ? `🔥 x${gameState.combo} COMBO!` : `x${gameState.combo}`;
+  el.style.left = x + 'px';
+  el.style.top = (y - 20) + 'px';
+  wrap.appendChild(el);
+  setTimeout(() => el.remove(), 800);
+}
+
+function updateHUD() {
+  const total = gameState.hits + gameState.misses;
+  const acc = total > 0 ? Math.round(gameState.hits / total * 100) : '-';
+  const avgRt = gameState.reactionTimes.length > 0
+    ? Math.round(gameState.reactionTimes.reduce((a,b)=>a+b,0)/gameState.reactionTimes.length)
+    : '-';
+  document.getElementById('hud-hits').textContent = gameState.hits;
+  document.getElementById('hud-miss').textContent = gameState.misses;
+  document.getElementById('hud-acc').textContent = acc + (acc !== '-' ? '%' : '');
+  document.getElementById('hud-rt').textContent = avgRt + (avgRt !== '-' ? 'ms' : '');
+  document.getElementById('hud-combo').textContent = 'x' + gameState.combo;
+}
+
+// ==================== 灵敏度 ====================
+let sensCtx, sensTarget, sensMouseX = -1, sensMouseY = -1;
+
+function initSensCanvas() {
+  const sc = document.getElementById('sensCanvas');
+  const parent = sc.parentElement;
+  sc.width = parent.clientWidth - 48;
+  sc.height = 240;
+  sensCtx = sc.getContext('2d');
+
+  sensTarget = { x: sc.width/2, y: sc.height/2, vx: 1.8, vy: 1.3 };
+
+  sc.addEventListener('mousemove', e => {
+    const r = sc.getBoundingClientRect();
+    sensMouseX = (e.clientX - r.left) * (sc.width / r.width);
+    sensMouseY = (e.clientY - r.top) * (sc.height / r.height);
+  });
+
+  function drawSens() {
+    if (!sensCtx) return;
+    const w = sc.width, h = sc.height;
+    sensCtx.fillStyle = '#080d14';
+    sensCtx.fillRect(0, 0, w, h);
+
+    // 网格
+    sensCtx.strokeStyle = 'rgba(255,255,255,0.04)';
+    sensCtx.lineWidth = 1;
+    for (let x = 0; x < w; x+=30) { sensCtx.beginPath(); sensCtx.moveTo(x,0); sensCtx.lineTo(x,h); sensCtx.stroke(); }
+    for (let y = 0; y < h; y+=30) { sensCtx.beginPath(); sensCtx.moveTo(0,y); sensCtx.lineTo(w,y); sensCtx.stroke(); }
+
+    // 移动靶
+    sensTarget.x += sensTarget.vx;
+    sensTarget.y += sensTarget.vy;
+    if (sensTarget.x < 25 || sensTarget.x > w-25) sensTarget.vx *= -1;
+    if (sensTarget.y < 25 || sensTarget.y > h-25) sensTarget.vy *= -1;
+
+    // 连线（鼠标→靶）
+    if (sensMouseX > 0) {
+      const dx = sensTarget.x - sensMouseX, dy = sensTarget.y - sensMouseY;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      sensCtx.strokeStyle = `rgba(0,212,255,${Math.max(0, 1 - dist/300)})`;
+      sensCtx.lineWidth = 1;
+      sensCtx.setLineDash([4,4]);
+      sensCtx.beginPath(); sensCtx.moveTo(sensMouseX, sensMouseY); sensCtx.lineTo(sensTarget.x, sensTarget.y); sensCtx.stroke();
+      sensCtx.setLineDash([]);
+    }
+
+    // 靶
+    sensCtx.strokeStyle = '#ff6b35';
+    sensCtx.lineWidth = 2;
+    sensCtx.fillStyle = 'rgba(255,107,53,0.15)';
+    sensCtx.beginPath(); sensCtx.arc(sensTarget.x, sensTarget.y, 22, 0, Math.PI*2); sensCtx.fill(); sensCtx.stroke();
+    sensCtx.strokeStyle = 'rgba(255,200,150,0.4)';
+    sensCtx.lineWidth = 1.5;
+    sensCtx.beginPath(); sensCtx.arc(sensTarget.x, sensTarget.y, 10, 0, Math.PI*2); sensCtx.stroke();
+
+    // 鼠标
+    if (sensMouseX > 0) {
+      sensCtx.fillStyle = '#00d4ff';
+      sensCtx.shadowColor = '#00d4ff';
+      sensCtx.shadowBlur = 8;
+      sensCtx.beginPath(); sensCtx.arc(sensMouseX, sensMouseY, 5, 0, Math.PI*2); sensCtx.fill();
+      sensCtx.shadowBlur = 0;
+    }
+
+    requestAnimationFrame(drawSens);
+  }
+  drawSens();
+  updateSens();
+}
+
+function updateSens() {
+  const dpi = +document.getElementById('dpi').value;
+  const igs = +document.getElementById('igs').value;
+  const ads = +document.getElementById('ads').value;
+
+  document.getElementById('dpi-val').textContent = dpi;
+  document.getElementById('igs-val').textContent = igs;
+  document.getElementById('ads-val').textContent = ads.toFixed(2);
+
+  // eDPI 计算
+  const eDPI = dpi * (igs / 100) * 2;
+  // 360°距离 (cm) ≈ (2.54 × 360) / (eDPI × yaw_rate)
+  // 三角洲行动 yaw ≈ 0.022 (类 CoD 换算)
+  const yaw = 0.022;
+  const cm360 = (2.54 * 360) / (eDPI * yaw);
+  document.getElementById('cm360').textContent = cm360.toFixed(1);
+
+  // 各游戏换算（基于相同 eDPI）
+  document.getElementById('conv-delta').textContent = igs;
+  document.getElementById('conv-cs').textContent = (eDPI / dpi / 3.18).toFixed(2);
+  document.getElementById('conv-val').textContent = (eDPI / dpi / 3.18 * 1.2).toFixed(2);
+  document.getElementById('conv-pubg').textContent = Math.round(igs * 0.8);
+  document.getElementById('conv-apex').textContent = (eDPI / dpi / 3.18 * 1.5).toFixed(2);
+  document.getElementById('conv-ow').textContent = (eDPI / dpi / 3.18 * 10.6).toFixed(1);
+}
+
+// ==================== 数据统计 ====================
+function saveRecord(r) {
+  const history = JSON.parse(localStorage.getItem('aimtrainer_history') || '[]');
+  history.unshift(r);
+  if (history.length > 50) history.pop();
+  localStorage.setItem('aimtrainer_history', JSON.stringify(history));
+}
+
+function renderStats() {
+  const history = JSON.parse(localStorage.getItem('aimtrainer_history') || '[]');
+  document.getElementById('s-total').textContent = history.length;
+
+  if (history.length > 0) {
+    const avgAcc = Math.round(history.reduce((a,b)=>a+b.acc,0)/history.length);
+    const rtRecords = history.filter(r=>r.avgRt>0);
+    const avgRt = rtRecords.length>0 ? Math.round(rtRecords.reduce((a,b)=>a+b.avgRt,0)/rtRecords.length) : 0;
+    const maxCombo = Math.max(...history.map(r=>r.combo));
+    document.getElementById('s-avgacc').textContent = avgAcc + '%';
+    document.getElementById('s-avgrt').textContent = avgRt || '-';
+    document.getElementById('s-combo').textContent = maxCombo;
+  }
+
+  const tbody = document.getElementById('history-body');
+  if (history.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px">暂无记录，开始你的第一局训练吧 🎯</td></tr>';
+    return;
+  }
+  const modeNames = {static:'静态靶',moving:'移动靶',tracking:'追踪靶',flick:'闪现靶'};
+  tbody.innerHTML = history.map(r => `
+    <tr>
+      <td>${r.time}</td>
+      <td>${modeNames[r.mode]||r.mode}</td>
+      <td>${r.hits} / ${r.total}</td>
+      <td>${r.acc}%</td>
+      <td>${r.avgRt || '-'}ms</td>
+      <td>x${r.combo}</td>
+      <td><span class="tag tag-${r.grade.toLowerCase()}">${r.grade}</span></td>
+    </tr>
+  `).join('');
+}
+
+function clearHistory() {
+  if (confirm('确定清除所有训练记录？')) {
+    localStorage.removeItem('aimtrainer_history');
+    renderStats();
+  }
+}
+</script>
+</body>
+</html>

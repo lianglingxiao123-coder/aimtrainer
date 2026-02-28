@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🎯 三角洲练枪训练营</title>
+<title>🎯 三角洲练枪训练营 v1.1</title>
 <style>
   :root {
     --bg: #0a0e1a; --panel: #111827; --border: #1f2937;
@@ -114,7 +114,7 @@
 <body>
 
 <header>
-  <div class="logo">🎯 <span>三角洲</span> 练枪训练营</div>
+  <div class="logo">🎯 <span>三角洲</span> 练枪训练营 <small style="font-size:11px;opacity:.6;font-weight:400">v1.1</small></div>
   <div class="nav-tabs">
     <button class="nav-tab active" onclick="switchPage('arena',this)">🎮 训练场</button>
     <button class="nav-tab" onclick="switchPage('sens',this)">⚙️ 灵敏度</button>
@@ -258,6 +258,7 @@ const ctx=canvas.getContext('2d');
 const wrap=document.getElementById('canvas-wrap');
 const crosshairEl=document.getElementById('crosshair');
 let W,H;
+let bgCache=null; // 必须在 resize() 调用前声明
 function resize(){
   W=canvas.width=wrap.clientWidth;
   H=canvas.height=wrap.clientHeight;
@@ -289,7 +290,6 @@ const HP_MAX=100, DMG_HEAD=50, DMG_BODY=25;
 
 // ── 随机种子（背景稳定）──
 function seeded(seed){ let s=seed; return ()=>{ s=(s*16807)%2147483647; return(s-1)/2147483646; }; }
-let bgCache=null;
 
 function getBg(){
   if(bgCache&&bgCache.width===W&&bgCache.height===H) return bgCache;

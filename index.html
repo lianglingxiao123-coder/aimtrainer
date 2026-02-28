@@ -554,7 +554,7 @@ class Target {
 
     // ── 躯干（梯形：肩宽>腰宽）──
     const sw = this.shoulderW, ww = this.waistW;
-    ctx.fillStyle = torsoC; ctx.strokeStyle = flash ? '#ff3366' : '#1e3a1e'; ctx.lineWidth = 1;
+    ctx.fillStyle = torsoC; ctx.strokeStyle = tintColor ? tintColor : '#1e3a1e'; ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(x - sw/2, shoulderY);
     ctx.lineTo(x + sw/2, shoulderY);
@@ -563,7 +563,7 @@ class Target {
     ctx.closePath(); ctx.fill(); ctx.stroke();
 
     // ── 武器 ──
-    ctx.fillStyle = flash ? '#ff3366' : '#1a1a1a';
+    ctx.fillStyle = tintColor ? tintColor : '#1a1a1a';
     ctx.save();
     ctx.translate(x + gd * sw * 0.52, shoulderY + this.torsoH * 0.3);
     const gunL = this.headR * 3.6;
@@ -595,7 +595,7 @@ class Target {
     ctx.beginPath(); ctx.moveTo(x, shoulderY); ctx.lineTo(x, headCY + this.headR); ctx.stroke();
 
     // ── 头部 ──
-    ctx.fillStyle = skinC; ctx.strokeStyle = flash ? '#ff3366' : '#a07050'; ctx.lineWidth = 1.5;
+    ctx.fillStyle = skinC; ctx.strokeStyle = tintColor ? tintColor : '#a07050'; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.arc(x, headCY, this.headR, 0, Math.PI*2); ctx.fill(); ctx.stroke();
     // 头盔
     ctx.fillStyle = helmC;

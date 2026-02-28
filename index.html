@@ -24,8 +24,6 @@
     min-height: 100vh;
     overflow-x: hidden;
   }
-
-  /* ===== HEADER ===== */
   header {
     display: flex;
     align-items: center;
@@ -38,20 +36,13 @@
   .logo span { color: var(--accent2); }
   .nav-tabs { display: flex; gap: 4px; }
   .nav-tab {
-    padding: 8px 20px;
-    border-radius: 8px;
-    border: none;
-    background: transparent;
-    color: var(--muted);
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
-    transition: all 0.2s;
+    padding: 8px 20px; border-radius: 8px; border: none;
+    background: transparent; color: var(--muted);
+    cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s;
   }
   .nav-tab:hover { color: var(--text); background: var(--border); }
   .nav-tab.active { background: var(--accent); color: #000; font-weight: 700; }
 
-  /* ===== PAGES ===== */
   .page { display: none; }
   .page.active { display: block; }
 
@@ -60,309 +51,163 @@
   #arena-page.active { display: flex; }
 
   .arena-hud {
-    display: flex;
-    align-items: center;
-    gap: 24px;
-    padding: 10px 24px;
-    background: rgba(0,0,0,0.4);
-    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 20px;
+    padding: 8px 20px; background: rgba(0,0,0,0.5);
+    border-bottom: 1px solid var(--border); flex-wrap: wrap;
   }
-  .hud-item { display: flex; flex-direction: column; align-items: center; }
+  .hud-item { display: flex; flex-direction: column; align-items: center; min-width: 52px; }
   .hud-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
-  .hud-value { font-size: 22px; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .hud-value { font-size: 20px; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
   .hud-value.red { color: var(--red); }
   .hud-value.green { color: var(--green); }
   .hud-sep { flex: 1; }
 
-  .mode-selector { display: flex; gap: 8px; }
+  .mode-selector { display: flex; gap: 6px; }
   .mode-btn {
-    padding: 6px 14px;
-    border-radius: 6px;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--muted);
-    cursor: pointer;
-    font-size: 13px;
-    transition: all 0.2s;
+    padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border);
+    background: transparent; color: var(--muted); cursor: pointer; font-size: 12px; transition: all 0.2s;
   }
   .mode-btn:hover { border-color: var(--accent); color: var(--accent); }
   .mode-btn.active { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 600; }
 
   .start-btn {
-    padding: 8px 24px;
-    border-radius: 8px;
-    border: none;
-    background: var(--green);
-    color: #000;
-    font-weight: 700;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.2s;
+    padding: 8px 22px; border-radius: 8px; border: none;
+    background: var(--green); color: #000; font-weight: 700; font-size: 14px;
+    cursor: pointer; transition: all 0.2s; white-space: nowrap;
   }
-  .start-btn:hover { filter: brightness(1.2); transform: scale(1.03); }
+  .start-btn:hover { filter: brightness(1.2); }
   .start-btn.stop { background: var(--red); }
 
   #canvas-wrap {
-    flex: 1;
-    position: relative;
-    overflow: hidden;
-    cursor: crosshair;
-    background: radial-gradient(ellipse at center, #0d1f2d 0%, #080d14 100%);
+    flex: 1; position: relative; overflow: hidden;
+    cursor: none;
+    background: linear-gradient(180deg, #1a2535 0%, #0d1520 40%, #182030 70%, #1e2a1a 100%);
   }
   #gameCanvas { width: 100%; height: 100%; display: block; }
 
-  /* 准星 */
+  /* 自定义准星 */
   #crosshair {
-    position: absolute;
-    pointer-events: none;
-    width: 20px;
-    height: 20px;
+    position: absolute; pointer-events: none;
+    width: 24px; height: 24px;
     transform: translate(-50%, -50%);
-    display: none;
   }
-  #canvas-wrap:hover #crosshair { display: block; }
 
-  /* 开始提示 */
   #start-overlay {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: rgba(0,0,0,0.6);
-    backdrop-filter: blur(4px);
-    gap: 16px;
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.65); backdrop-filter: blur(4px); gap: 14px;
   }
-  #start-overlay h2 { font-size: 32px; color: var(--accent); }
-  #start-overlay p { color: var(--muted); font-size: 16px; }
-  #start-overlay .big-start {
-    margin-top: 8px;
-    padding: 14px 48px;
-    border-radius: 12px;
-    border: none;
-    background: var(--green);
-    color: #000;
-    font-weight: 800;
-    font-size: 18px;
-    cursor: pointer;
-    letter-spacing: 1px;
-    transition: all 0.2s;
+  #start-overlay h2 { font-size: 30px; color: var(--accent); }
+  #start-overlay p { color: var(--muted); font-size: 15px; }
+  .big-start {
+    margin-top: 8px; padding: 14px 48px; border-radius: 12px; border: none;
+    background: var(--green); color: #000; font-weight: 800; font-size: 18px;
+    cursor: pointer; letter-spacing: 1px; transition: all 0.2s;
   }
-  #start-overlay .big-start:hover { filter: brightness(1.2); transform: scale(1.05); }
+  .big-start:hover { filter: brightness(1.2); transform: scale(1.04); }
 
-  /* 结算弹窗 */
   #result-modal {
-    position: absolute;
-    inset: 0;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    background: rgba(0,0,0,0.7);
-    backdrop-filter: blur(6px);
+    position: absolute; inset: 0; display: none;
+    align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.72); backdrop-filter: blur(6px);
   }
   #result-modal.show { display: flex; }
   .result-card {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 32px 40px;
-    min-width: 320px;
-    text-align: center;
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 16px; padding: 32px 40px; min-width: 320px; text-align: center;
   }
-  .result-card h2 { font-size: 24px; margin-bottom: 20px; color: var(--accent); }
+  .result-card h2 { font-size: 22px; margin-bottom: 18px; color: var(--accent); }
   .result-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--border);
-    font-size: 15px;
+    display: flex; justify-content: space-between; padding: 8px 0;
+    border-bottom: 1px solid var(--border); font-size: 14px;
   }
   .result-row:last-of-type { border: none; }
   .result-row .val { font-weight: 700; color: var(--green); }
-  .result-actions { display: flex; gap: 12px; margin-top: 20px; justify-content: center; }
+  .result-actions { display: flex; gap: 12px; margin-top: 18px; justify-content: center; }
   .result-actions button {
-    padding: 10px 24px;
-    border-radius: 8px;
-    border: none;
-    font-weight: 600;
-    cursor: pointer;
-    font-size: 14px;
-    transition: all 0.2s;
+    padding: 10px 24px; border-radius: 8px; border: none;
+    font-weight: 600; cursor: pointer; font-size: 14px; transition: all 0.2s;
   }
   .btn-retry { background: var(--green); color: #000; }
   .btn-retry:hover { filter: brightness(1.1); }
   .btn-close { background: var(--border); color: var(--text); }
-  .btn-close:hover { background: var(--muted); }
 
-  /* ===== SENSITIVITY PAGE ===== */
-  #sens-page { padding: 32px 40px; max-width: 900px; margin: 0 auto; }
-  #sens-page h2 { font-size: 24px; color: var(--accent); margin-bottom: 8px; }
-  #sens-page .sub { color: var(--muted); margin-bottom: 32px; }
-
-  .sens-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
-  .sens-card {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 24px;
+  /* 命中特效 */
+  .hit-effect {
+    position: absolute; pointer-events: none;
+    font-size: 14px; font-weight: 800; color: var(--red);
+    text-shadow: 0 0 8px var(--red);
+    animation: floatUp 0.7s ease-out forwards;
+    white-space: nowrap;
   }
-  .sens-card h3 { font-size: 15px; color: var(--muted); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px; }
-  .slider-row { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
-  .slider-row label { display: flex; justify-content: space-between; font-size: 14px; }
+  .hit-effect.headshot { color: #ffd700; text-shadow: 0 0 10px #ffd700; font-size: 16px; }
+  .combo-toast {
+    position: absolute; pointer-events: none;
+    font-size: 17px; font-weight: 800; color: var(--green);
+    text-shadow: 0 0 10px var(--green);
+    animation: floatUp 0.9s ease-out forwards;
+  }
+  @keyframes floatUp {
+    0% { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-55px) scale(1.2); }
+  }
+
+  /* ===== SENSITIVITY ===== */
+  #sens-page { padding: 28px 36px; max-width: 900px; margin: 0 auto; }
+  #sens-page h2 { font-size: 22px; color: var(--accent); margin-bottom: 6px; }
+  #sens-page .sub { color: var(--muted); margin-bottom: 28px; }
+  .sens-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+  .sens-card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 22px; }
+  .sens-card h3 { font-size: 13px; color: var(--muted); margin-bottom: 14px; text-transform: uppercase; letter-spacing: 1px; }
+  .slider-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+  .slider-row label { display: flex; justify-content: space-between; font-size: 13px; }
   .slider-row label span { color: var(--accent); font-weight: 600; }
   input[type=range] {
-    width: 100%;
-    height: 6px;
-    border-radius: 4px;
-    background: var(--border);
-    outline: none;
-    cursor: pointer;
-    -webkit-appearance: none;
+    width: 100%; height: 6px; border-radius: 4px; background: var(--border);
+    outline: none; cursor: pointer; -webkit-appearance: none;
   }
   input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: var(--accent);
-    cursor: pointer;
-    box-shadow: 0 0 8px var(--accent);
+    -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%;
+    background: var(--accent); cursor: pointer; box-shadow: 0 0 8px var(--accent);
   }
+  #sens-arena { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 22px; margin-bottom: 20px; }
+  #sens-arena h3 { font-size: 13px; color: var(--muted); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  #sensCanvas { width: 100%; height: 200px; border-radius: 8px; cursor: crosshair; display: block; background: #080d14; }
+  .sens-tip { margin-top: 8px; font-size: 12px; color: var(--muted); text-align: center; }
+  .sens-convert { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 22px; }
+  .sens-convert h3 { font-size: 13px; color: var(--muted); margin-bottom: 14px; text-transform: uppercase; letter-spacing: 1px; }
+  .convert-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .convert-item { background: var(--bg); border-radius: 8px; padding: 12px; text-align: center; }
+  .convert-item .game-name { font-size: 11px; color: var(--muted); margin-bottom: 5px; }
+  .convert-item .sens-val { font-size: 20px; font-weight: 700; color: var(--accent2); }
+  .convert-item .sens-unit { font-size: 10px; color: var(--muted); }
 
-  #sens-arena {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 24px;
-    margin-bottom: 24px;
-  }
-  #sens-arena h3 { font-size: 15px; color: var(--muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px; }
-  #sensCanvas {
-    width: 100%;
-    height: 240px;
-    border-radius: 8px;
-    cursor: crosshair;
-    display: block;
-    background: #080d14;
-  }
-  .sens-tip {
-    margin-top: 10px;
-    font-size: 13px;
-    color: var(--muted);
-    text-align: center;
-  }
-
-  .sens-convert {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 24px;
-  }
-  .sens-convert h3 { font-size: 15px; color: var(--muted); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px; }
-  .convert-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-  .convert-item {
-    background: var(--bg);
-    border-radius: 8px;
-    padding: 14px;
-    text-align: center;
-  }
-  .convert-item .game-name { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
-  .convert-item .sens-val { font-size: 22px; font-weight: 700; color: var(--accent2); }
-  .convert-item .sens-unit { font-size: 11px; color: var(--muted); }
-
-  /* ===== STATS PAGE ===== */
-  #stats-page { padding: 32px 40px; max-width: 900px; margin: 0 auto; }
-  #stats-page h2 { font-size: 24px; color: var(--accent); margin-bottom: 8px; }
-  #stats-page .sub { color: var(--muted); margin-bottom: 32px; }
-
-  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
-  .stat-card {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 20px;
-    text-align: center;
-  }
-  .stat-card .s-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
-  .stat-card .s-val { font-size: 28px; font-weight: 800; color: var(--accent); }
-  .stat-card .s-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
-
-  .history-table {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    overflow: hidden;
-  }
-  .history-table h3 {
-    padding: 16px 20px;
-    font-size: 14px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    border-bottom: 1px solid var(--border);
-  }
+  /* ===== STATS ===== */
+  #stats-page { padding: 28px 36px; max-width: 900px; margin: 0 auto; }
+  #stats-page h2 { font-size: 22px; color: var(--accent); margin-bottom: 6px; }
+  #stats-page .sub { color: var(--muted); margin-bottom: 28px; }
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+  .stat-card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 18px; text-align: center; }
+  .stat-card .s-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 7px; }
+  .stat-card .s-val { font-size: 26px; font-weight: 800; color: var(--accent); }
+  .history-table { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .history-table h3 { padding: 14px 18px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border); }
   table { width: 100%; border-collapse: collapse; }
-  th {
-    padding: 10px 16px;
-    text-align: left;
-    font-size: 12px;
-    color: var(--muted);
-    border-bottom: 1px solid var(--border);
-    background: rgba(255,255,255,0.02);
-  }
-  td {
-    padding: 10px 16px;
-    font-size: 14px;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-  }
+  th { padding: 9px 14px; text-align: left; font-size: 11px; color: var(--muted); border-bottom: 1px solid var(--border); }
+  td { padding: 9px 14px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.04); }
   tr:last-child td { border: none; }
   tr:hover td { background: rgba(255,255,255,0.03); }
-  .tag {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 11px;
-    font-weight: 600;
-  }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
   .tag-s { background: rgba(0,212,255,0.15); color: var(--accent); }
   .tag-a { background: rgba(0,255,136,0.15); color: var(--green); }
   .tag-b { background: rgba(255,107,53,0.15); color: var(--accent2); }
   .tag-c { background: rgba(100,116,139,0.15); color: var(--muted); }
-
   .clear-btn {
-    margin-top: 16px;
-    padding: 8px 20px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--muted);
-    cursor: pointer;
-    font-size: 13px;
-    transition: all 0.2s;
+    margin-top: 14px; padding: 7px 18px; border-radius: 8px; border: 1px solid var(--border);
+    background: transparent; color: var(--muted); cursor: pointer; font-size: 13px; transition: all 0.2s;
   }
   .clear-btn:hover { border-color: var(--red); color: var(--red); }
-
-  /* 连击提示 */
-  .combo-toast {
-    position: absolute;
-    pointer-events: none;
-    font-size: 18px;
-    font-weight: 800;
-    color: var(--green);
-    text-shadow: 0 0 10px var(--green);
-    animation: floatUp 0.8s ease-out forwards;
-  }
-  @keyframes floatUp {
-    0% { opacity: 1; transform: translateY(0) scale(1); }
-    100% { opacity: 0; transform: translateY(-50px) scale(1.3); }
-  }
-
-  /* 响应式 */
-  @media (max-width: 640px) {
-    .sens-grid, .stats-grid, .convert-grid { grid-template-columns: 1fr; }
-    #sens-page, #stats-page { padding: 20px; }
-  }
 </style>
 </head>
 <body>
@@ -370,13 +215,13 @@
 <header>
   <div class="logo">🎯 <span>三角洲</span> 练枪训练营</div>
   <div class="nav-tabs">
-    <button class="nav-tab active" onclick="switchPage('arena')">🎮 训练场</button>
-    <button class="nav-tab" onclick="switchPage('sens')">⚙️ 灵敏度</button>
-    <button class="nav-tab" onclick="switchPage('stats')">📊 数据</button>
+    <button class="nav-tab active" onclick="switchPage('arena',this)">🎮 训练场</button>
+    <button class="nav-tab" onclick="switchPage('sens',this)">⚙️ 灵敏度</button>
+    <button class="nav-tab" onclick="switchPage('stats',this)">📊 数据</button>
   </div>
 </header>
 
-<!-- ===== 训练场 ===== -->
+<!-- 训练场 -->
 <div id="arena-page" class="page active">
   <div class="arena-hud">
     <div class="hud-item">
@@ -389,45 +234,58 @@
     </div>
     <div class="hud-item">
       <span class="hud-label">命中率</span>
-      <span class="hud-value" id="hud-acc">-%</span>
+      <span class="hud-value" id="hud-acc">-</span>
     </div>
     <div class="hud-item">
-      <span class="hud-label">平均反应</span>
-      <span class="hud-value" id="hud-rt">-ms</span>
+      <span class="hud-label">爆头率</span>
+      <span class="hud-value" id="hud-hs" style="color:#ffd700">-</span>
+    </div>
+    <div class="hud-item">
+      <span class="hud-label">反应时间</span>
+      <span class="hud-value" id="hud-rt">-</span>
     </div>
     <div class="hud-item">
       <span class="hud-label">连击</span>
       <span class="hud-value" id="hud-combo">x0</span>
     </div>
     <div class="hud-item">
-      <span class="hud-label">剩余时间</span>
+      <span class="hud-label">剩余</span>
       <span class="hud-value" id="hud-time">60s</span>
     </div>
     <div class="hud-sep"></div>
     <div class="mode-selector">
-      <button class="mode-btn active" onclick="setMode('static')" id="btn-static">静态靶</button>
-      <button class="mode-btn" onclick="setMode('moving')" id="btn-moving">移动靶</button>
-      <button class="mode-btn" onclick="setMode('tracking')" id="btn-tracking">追踪</button>
-      <button class="mode-btn" onclick="setMode('flick')" id="btn-flick">闪现</button>
+      <button class="mode-btn active" id="btn-patrol" onclick="setMode('patrol')">巡逻</button>
+      <button class="mode-btn" id="btn-sprint" onclick="setMode('sprint')">冲刺</button>
+      <button class="mode-btn" id="btn-peek" onclick="setMode('peek')">探头</button>
+      <button class="mode-btn" id="btn-multi" onclick="setMode('multi')">多目标</button>
     </div>
     <button class="start-btn" id="startBtn" onclick="toggleGame()">开始训练</button>
   </div>
 
   <div id="canvas-wrap">
     <canvas id="gameCanvas"></canvas>
-    <svg id="crosshair" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-      <line x1="10" y1="0" x2="10" y2="7" stroke="#00d4ff" stroke-width="1.5"/>
-      <line x1="10" y1="13" x2="10" y2="20" stroke="#00d4ff" stroke-width="1.5"/>
-      <line x1="0" y1="10" x2="7" y2="10" stroke="#00d4ff" stroke-width="1.5"/>
-      <line x1="13" y1="10" x2="20" y2="10" stroke="#00d4ff" stroke-width="1.5"/>
-      <circle cx="10" cy="10" r="1.5" fill="#00d4ff"/>
+    <!-- 自定义准星 -->
+    <svg id="crosshair" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <line x1="12" y1="1" x2="12" y2="8" stroke="#00d4ff" stroke-width="1.5" opacity="0.9"/>
+      <line x1="12" y1="16" x2="12" y2="23" stroke="#00d4ff" stroke-width="1.5" opacity="0.9"/>
+      <line x1="1" y1="12" x2="8" y2="12" stroke="#00d4ff" stroke-width="1.5" opacity="0.9"/>
+      <line x1="16" y1="12" x2="23" y2="12" stroke="#00d4ff" stroke-width="1.5" opacity="0.9"/>
+      <circle cx="12" cy="12" r="1.8" fill="#00d4ff" opacity="0.9"/>
     </svg>
+
     <div id="start-overlay">
       <h2>🎯 三角洲练枪训练营</h2>
-      <p>选择模式，开始提升你的 FPS 技术</p>
-      <p style="font-size:13px;color:#64748b">静态靶 → 移动靶 → 闪现靶 逐步进阶</p>
+      <p>人形靶 · 地面横移 · 真实战场节奏</p>
+      <p style="font-size:12px;color:#64748b;margin-top:-4px">爆头 +2分 · 身体 +1分 · 连击有奖励</p>
+      <div style="display:flex;gap:28px;margin-top:4px;font-size:13px;color:var(--muted)">
+        <span>🪖 <b style="color:var(--text)">巡逻</b> — 慢速横移</span>
+        <span>💨 <b style="color:var(--text)">冲刺</b> — 高速奔跑</span>
+        <span>👁️ <b style="color:var(--text)">探头</b> — 掩体闪现</span>
+        <span>🎯 <b style="color:var(--text)">多目标</b> — 快速切换</span>
+      </div>
       <button class="big-start" onclick="toggleGame()">▶ 开始训练</button>
     </div>
+
     <div id="result-modal">
       <div class="result-card">
         <h2>🏆 训练结算</h2>
@@ -441,11 +299,10 @@
   </div>
 </div>
 
-<!-- ===== 灵敏度 ===== -->
+<!-- 灵敏度 -->
 <div id="sens-page" class="page">
   <h2>⚙️ 灵敏度调校</h2>
-  <p class="sub">调整参数，在测试场感受手感，找到最适合你的设置</p>
-
+  <p class="sub">找到最适合你的灵敏度，在测试场跟踪横向移动目标感受手感</p>
   <div class="sens-grid">
     <div class="sens-card">
       <h3>鼠标设置</h3>
@@ -462,108 +319,61 @@
         <input type="range" id="ads" min="0.3" max="1.0" step="0.05" value="0.8" oninput="updateSens()">
       </div>
     </div>
-
     <div class="sens-card">
-      <h3>360°距离换算</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">旋转360°需要移动鼠标的距离（越小越灵敏）</p>
+      <h3>360° 距离换算</h3>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px">旋转360°需要移动鼠标的距离</p>
       <div style="text-align:center">
-        <div style="font-size:48px;font-weight:800;color:var(--accent)" id="cm360">--</div>
-        <div style="color:var(--muted);margin-top:4px">厘米 / 360°</div>
+        <div style="font-size:44px;font-weight:800;color:var(--accent)" id="cm360">--</div>
+        <div style="color:var(--muted);margin-top:4px;font-size:13px">厘米 / 360°</div>
       </div>
-      <hr style="border-color:var(--border);margin:16px 0">
-      <div style="font-size:13px;color:var(--muted)">
+      <hr style="border-color:var(--border);margin:14px 0">
+      <div style="font-size:12px;color:var(--muted);line-height:1.8">
         💡 职业玩家参考：<br>
-        &nbsp;&nbsp;低灵敏（精准）：30–50 cm<br>
-        &nbsp;&nbsp;中灵敏（均衡）：20–30 cm<br>
-        &nbsp;&nbsp;高灵敏（快速）：10–20 cm
+        &nbsp;&nbsp;低灵敏（精准狙击）：40–60 cm<br>
+        &nbsp;&nbsp;中灵敏（均衡）：20–40 cm<br>
+        &nbsp;&nbsp;高灵敏（快速反应）：10–20 cm
       </div>
     </div>
   </div>
-
   <div id="sens-arena">
-    <h3>手感测试场 — 跟踪移动靶（感受当前灵敏度）</h3>
+    <h3>手感测试场 — 横向奔跑人形靶（感受当前灵敏度）</h3>
     <canvas id="sensCanvas"></canvas>
-    <p class="sens-tip">在画布上移动鼠标，追踪移动的靶心 • 蓝点 = 鼠标位置</p>
+    <p class="sens-tip">在画布上移动鼠标跟踪靶 • 蓝点 = 你的准星 • 调整灵敏度直到跟踪顺手</p>
   </div>
-
   <div class="sens-convert">
-    <h3>常见 FPS 游戏换算（相同 eDPI）</h3>
+    <h3>常见 FPS 游戏灵敏度换算</h3>
     <div class="convert-grid">
-      <div class="convert-item">
-        <div class="game-name">三角洲行动</div>
-        <div class="sens-val" id="conv-delta">-</div>
-        <div class="sens-unit">灵敏度</div>
-      </div>
-      <div class="convert-item">
-        <div class="game-name">CSGO / CS2</div>
-        <div class="sens-val" id="conv-cs">-</div>
-        <div class="sens-unit">sensitivity</div>
-      </div>
-      <div class="convert-item">
-        <div class="game-name">Valorant</div>
-        <div class="sens-val" id="conv-val">-</div>
-        <div class="sens-unit">sensitivity</div>
-      </div>
-      <div class="convert-item">
-        <div class="game-name">和平精英</div>
-        <div class="sens-val" id="conv-pubg">-</div>
-        <div class="sens-unit">灵敏度</div>
-      </div>
-      <div class="convert-item">
-        <div class="game-name">Apex Legends</div>
-        <div class="sens-val" id="conv-apex">-</div>
-        <div class="sens-unit">sensitivity</div>
-      </div>
-      <div class="convert-item">
-        <div class="game-name">Overwatch 2</div>
-        <div class="sens-val" id="conv-ow">-</div>
-        <div class="sens-unit">sensitivity</div>
-      </div>
+      <div class="convert-item"><div class="game-name">三角洲行动</div><div class="sens-val" id="conv-delta">-</div><div class="sens-unit">灵敏度</div></div>
+      <div class="convert-item"><div class="game-name">CSGO / CS2</div><div class="sens-val" id="conv-cs">-</div><div class="sens-unit">sensitivity</div></div>
+      <div class="convert-item"><div class="game-name">Valorant</div><div class="sens-val" id="conv-val">-</div><div class="sens-unit">sensitivity</div></div>
+      <div class="convert-item"><div class="game-name">和平精英</div><div class="sens-val" id="conv-pubg">-</div><div class="sens-unit">灵敏度</div></div>
+      <div class="convert-item"><div class="game-name">Apex Legends</div><div class="sens-val" id="conv-apex">-</div><div class="sens-unit">sensitivity</div></div>
+      <div class="convert-item"><div class="game-name">Overwatch 2</div><div class="sens-val" id="conv-ow">-</div><div class="sens-unit">sensitivity</div></div>
     </div>
   </div>
 </div>
 
-<!-- ===== 数据统计 ===== -->
+<!-- 统计 -->
 <div id="stats-page" class="page">
   <h2>📊 训练数据</h2>
-  <p class="sub">记录每次训练，追踪你的进步曲线</p>
-
+  <p class="sub">追踪你的进步曲线</p>
   <div class="stats-grid">
-    <div class="stat-card">
-      <div class="s-label">总训练局数</div>
-      <div class="s-val" id="s-total">0</div>
-    </div>
-    <div class="stat-card">
-      <div class="s-label">平均命中率</div>
-      <div class="s-val" id="s-avgacc">0%</div>
-    </div>
-    <div class="stat-card">
-      <div class="s-label">平均反应时间</div>
-      <div class="s-val" id="s-avgrt">-</div>
-      <div class="s-sub">毫秒</div>
-    </div>
-    <div class="stat-card">
-      <div class="s-label">最高连击</div>
-      <div class="s-val" id="s-combo">0</div>
-    </div>
+    <div class="stat-card"><div class="s-label">总训练局数</div><div class="s-val" id="s-total">0</div></div>
+    <div class="stat-card"><div class="s-label">平均命中率</div><div class="s-val" id="s-avgacc">0%</div></div>
+    <div class="stat-card"><div class="s-label">平均反应时间</div><div class="s-val" id="s-avgrt">-ms</div></div>
+    <div class="stat-card"><div class="s-label">最高连击</div><div class="s-val" id="s-combo">0</div></div>
   </div>
-
   <div class="history-table">
     <h3>📋 训练记录</h3>
     <table>
       <thead>
         <tr>
-          <th>时间</th>
-          <th>模式</th>
-          <th>命中/总数</th>
-          <th>命中率</th>
-          <th>平均反应</th>
-          <th>连击</th>
-          <th>评级</th>
+          <th>时间</th><th>模式</th><th>命中/总数</th><th>命中率</th>
+          <th>爆头率</th><th>平均反应</th><th>连击</th><th>评级</th>
         </tr>
       </thead>
       <tbody id="history-body">
-        <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px">暂无记录，开始你的第一局训练吧 🎯</td></tr>
+        <tr><td colspan="8" style="text-align:center;color:var(--muted);padding:28px">暂无记录 🎯</td></tr>
       </tbody>
     </table>
   </div>
@@ -571,402 +381,611 @@
 </div>
 
 <script>
-// ==================== 页面切换 ====================
-function switchPage(name) {
+// ========== 页面切换 ==========
+function switchPage(name, btn) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById(name + '-page').classList.add('active');
-  event.target.classList.add('active');
+  btn.classList.add('active');
   if (name === 'sens') initSensCanvas();
   if (name === 'stats') renderStats();
 }
 
-// ==================== 训练场 ====================
+// ========== 游戏核心 ==========
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const wrap = document.getElementById('canvas-wrap');
+const crosshair = document.getElementById('crosshair');
 
-let gameState = {
-  running: false,
-  mode: 'static',
-  hits: 0,
-  misses: 0,
-  combo: 0,
-  maxCombo: 0,
-  reactionTimes: [],
-  timeLeft: 60,
-  targets: [],
-  animFrame: null,
-  timer: null,
-  spawnTimer: null,
-};
-
+let W, H;
 function resizeCanvas() {
-  canvas.width = wrap.clientWidth;
-  canvas.height = wrap.clientHeight;
+  W = canvas.width = wrap.clientWidth;
+  H = canvas.height = wrap.clientHeight;
 }
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
 
-// 移动准星
+// 准星跟随
+let mouseX = 0, mouseY = 0;
 wrap.addEventListener('mousemove', e => {
-  const ch = document.getElementById('crosshair');
-  const rect = wrap.getBoundingClientRect();
-  ch.style.left = (e.clientX - rect.left) + 'px';
-  ch.style.top = (e.clientY - rect.top) + 'px';
+  const r = wrap.getBoundingClientRect();
+  mouseX = e.clientX - r.left;
+  mouseY = e.clientY - r.top;
+  crosshair.style.left = mouseX + 'px';
+  crosshair.style.top = mouseY + 'px';
 });
 
+// ---- 人形靶定义 ----
+// 目标在地面线附近横向移动
+// groundY = H * 0.58（屏幕偏下中线，模拟地面）
+// 人形高度约 72px，宽约 22px，头部半径 9px
+
+const GROUND_RATIO = 0.58; // 地面线位置（从顶部）
+const FIGURE_H = 72;       // 人形总高度（含头）
+const HEAD_R = 9;          // 头部半径
+const BODY_W = 20;         // 躯干宽
+const BODY_H = 38;         // 躯干高
+// 垂直分布：在 groundY 附近有一定随机偏移（±15%），模拟不同距离
+const Y_SPREAD = 0.12;
+
+// 目标结构
+class Target {
+  constructor(mode) {
+    this.mode = mode;
+    this.alive = true;
+    this.hit = false;
+    this.hitTimer = 0;
+    this.born = Date.now();
+
+    // 垂直中心（脚踩在 groundY，头顶在 groundY - FIGURE_H）
+    // 加上一点随机让场景有层次感
+    const gY = H * GROUND_RATIO + (Math.random() - 0.5) * H * Y_SPREAD;
+    this.footY = gY;
+    this.cy = gY - FIGURE_H / 2; // 中心 y（用于碰撞）
+
+    // 水平：从屏幕边缘外生成，横向移动
+    const dir = Math.random() < 0.5 ? 1 : -1;
+    this.x = dir > 0 ? -30 : W + 30;
+    this.dir = dir;
+
+    // 速度（各模式不同）
+    const speeds = { patrol: [90, 140], sprint: [200, 320], peek: [0, 0], multi: [120, 200] };
+    const [minS, maxS] = speeds[mode] || [100, 180];
+    this.speed = minS + Math.random() * (maxS - minS);
+
+    // 探头模式：从掩体露出，停留，然后缩回
+    if (mode === 'peek') {
+      this.peekState = 'in'; // in → visible → out
+      this.peekEdge = dir > 0 ? Math.random() * W * 0.4 + W * 0.1 : W - (Math.random() * W * 0.4 + W * 0.1);
+      this.peekVisible = 0;
+      this.peekDuration = 600 + Math.random() * 800; // 停留时长 ms
+      this.speed = 280 + Math.random() * 120;
+      this.x = dir > 0 ? this.peekEdge - 60 : this.peekEdge + 60;
+    }
+
+    // 闪现颜色（命中后变红）
+    this.color = { body: '#4a7a5a', head: '#c8a882', gear: '#3a5a4a' };
+
+    // 生命时间（超时自动消失，只用于 peek）
+    this.lifeMs = 4000;
+  }
+
+  // 头部碰撞圆心 (x, headY)
+  get headY() { return this.footY - FIGURE_H + HEAD_R; }
+
+  update(dt) {
+    if (!this.alive) return;
+
+    if (this.mode === 'peek') {
+      if (this.peekState === 'in') {
+        // 移动到 peekEdge
+        this.x += this.dir * this.speed * dt;
+        const reached = this.dir > 0 ? this.x >= this.peekEdge : this.x <= this.peekEdge;
+        if (reached) { this.x = this.peekEdge; this.peekState = 'visible'; this.peekVisible = Date.now(); }
+      } else if (this.peekState === 'visible') {
+        if (Date.now() - this.peekVisible > this.peekDuration) {
+          this.peekState = 'out';
+        }
+      } else {
+        // 缩回去
+        this.x -= this.dir * this.speed * dt;
+        const gone = this.dir > 0 ? this.x < this.peekEdge - 80 : this.x > this.peekEdge + 80;
+        if (gone) { this.alive = false; }
+      }
+    } else {
+      this.x += this.dir * this.speed * dt;
+      // 超出屏幕消失
+      if (this.x < -60 || this.x > W + 60) this.alive = false;
+    }
+
+    // 命中后闪红消失
+    if (this.hit) {
+      this.hitTimer += dt * 1000;
+      if (this.hitTimer > 180) this.alive = false;
+    }
+  }
+
+  draw(ctx) {
+    if (!this.alive) return;
+    const x = this.x, foot = this.footY;
+    const headY = foot - FIGURE_H + HEAD_R;
+    const shoulderY = headY + HEAD_R + 3;
+    const hipY = shoulderY + BODY_H;
+
+    ctx.save();
+
+    // 命中闪红
+    const flash = this.hit ? Math.sin(this.hitTimer / 20) > 0 : false;
+
+    // 阴影
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.beginPath();
+    ctx.ellipse(x, foot + 2, 14, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 腿（两条线）
+    ctx.strokeStyle = flash ? '#ff3366' : '#3a5a3a';
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    // 走路摆腿动画
+    const walkPhase = (Date.now() / 200) * this.dir;
+    const legSwing = Math.sin(walkPhase) * (this.mode === 'sprint' ? 12 : 7);
+    if (this.mode !== 'peek' || this.peekState === 'in' || this.peekState === 'out') {
+      ctx.beginPath(); ctx.moveTo(x - 4, hipY); ctx.lineTo(x - 5 + legSwing, foot); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x + 4, hipY); ctx.lineTo(x + 5 - legSwing, foot); ctx.stroke();
+    } else {
+      // 探头时站立
+      ctx.beginPath(); ctx.moveTo(x - 4, hipY); ctx.lineTo(x - 5, foot); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x + 4, hipY); ctx.lineTo(x + 5, foot); ctx.stroke();
+    }
+
+    // 躯干
+    ctx.fillStyle = flash ? '#ff3366' : this.color.gear;
+    ctx.strokeStyle = flash ? '#ff3366' : '#2a4a2a';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(x - BODY_W/2, shoulderY, BODY_W, BODY_H, 4);
+    ctx.fill(); ctx.stroke();
+
+    // 武器（步枪轮廓）
+    const gunDir = this.dir;
+    ctx.fillStyle = flash ? '#ff3366' : '#222';
+    ctx.save();
+    ctx.translate(x + gunDir * 6, shoulderY + 10);
+    ctx.fillRect(gunDir > 0 ? 0 : -26, -3, 26, 5);  // 枪管
+    ctx.fillRect(gunDir > 0 ? -4 : -2, -6, 8, 12); // 握把
+    ctx.restore();
+
+    // 手臂
+    ctx.strokeStyle = flash ? '#ff3366' : this.color.gear;
+    ctx.lineWidth = 5;
+    ctx.lineCap = 'round';
+    const armSwing = -Math.sin(walkPhase) * 5;
+    ctx.beginPath(); ctx.moveTo(x - BODY_W/2, shoulderY + 6); ctx.lineTo(x - BODY_W/2 - 6, shoulderY + 18 + armSwing); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x + BODY_W/2, shoulderY + 6); ctx.lineTo(x + BODY_W/2 + 8 * gunDir, shoulderY + 12); ctx.stroke();
+
+    // 头部
+    ctx.fillStyle = flash ? '#ff3366' : this.color.head;
+    ctx.strokeStyle = flash ? '#ff3366' : '#a07050';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(x, headY, HEAD_R, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+
+    // 头盔
+    ctx.fillStyle = flash ? '#ff3366' : this.color.gear;
+    ctx.beginPath();
+    ctx.ellipse(x, headY - 2, HEAD_R + 1, HEAD_R * 0.7, 0, Math.PI, 0);
+    ctx.fill();
+
+    // 距离感：远处目标画小一些（通过 globalAlpha 模拟）
+    ctx.restore();
+  }
+
+  // 判断是否命中，返回 'head' | 'body' | null
+  checkHit(mx, my) {
+    // 坐标转换（canvas 坐标）
+    const headY = this.footY - FIGURE_H + HEAD_R;
+    const shoulderY = headY + HEAD_R + 3;
+
+    // 头部碰撞
+    const dh = Math.hypot(mx - this.x, my - headY);
+    if (dh < HEAD_R + 5) return 'head';
+
+    // 躯干碰撞
+    if (mx > this.x - BODY_W/2 - 6 && mx < this.x + BODY_W/2 + 6 &&
+        my > shoulderY - 4 && my < shoulderY + BODY_H + 4) return 'body';
+
+    // 腿部（宽松一点）
+    if (mx > this.x - 10 && mx < this.x + 10 &&
+        my > shoulderY + BODY_H && my < this.footY + 4) return 'body';
+
+    return null;
+  }
+}
+
+// ========== 游戏状态 ==========
+let GS = {
+  running: false, mode: 'patrol',
+  hits: 0, misses: 0, headshots: 0, combo: 0, maxCombo: 0,
+  reactionTimes: [], timeLeft: 60,
+  targets: [], animFrame: null, timer: null, spawnInterval: null,
+  lastFrame: 0,
+};
+
 function setMode(m) {
-  gameState.mode = m;
+  GS.mode = m;
   document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('btn-' + m).classList.add('active');
 }
 
 function toggleGame() {
-  if (gameState.running) stopGame();
-  else startGame();
+  GS.running ? stopGame() : startGame();
 }
 
 function startGame() {
   document.getElementById('start-overlay').style.display = 'none';
-  gameState.running = true;
-  gameState.hits = 0;
-  gameState.misses = 0;
-  gameState.combo = 0;
-  gameState.maxCombo = 0;
-  gameState.reactionTimes = [];
-  gameState.timeLeft = 60;
-  gameState.targets = [];
-
-  document.getElementById('startBtn').textContent = '⏹ 停止';
-  document.getElementById('startBtn').classList.add('stop');
+  document.getElementById('result-modal').classList.remove('show');
+  Object.assign(GS, {
+    running: true, hits: 0, misses: 0, headshots: 0, combo: 0, maxCombo: 0,
+    reactionTimes: [], timeLeft: 60, targets: [], lastFrame: performance.now(),
+  });
+  const btn = document.getElementById('startBtn');
+  btn.textContent = '⏹ 停止'; btn.classList.add('stop');
   updateHUD();
 
-  spawnTarget();
-  if (gameState.mode === 'moving' || gameState.mode === 'tracking') {
-    gameState.spawnTimer = setInterval(spawnTarget, 1200);
-  }
+  // 生成第一批
+  spawnTargets();
 
-  gameState.timer = setInterval(() => {
-    gameState.timeLeft--;
-    document.getElementById('hud-time').textContent = gameState.timeLeft + 's';
-    if (gameState.timeLeft <= 0) stopGame(true);
+  // 定时生成
+  const spawnMs = { patrol: 2200, sprint: 1600, peek: 2000, multi: 1200 }[GS.mode] || 2000;
+  GS.spawnInterval = setInterval(spawnTargets, spawnMs);
+
+  GS.timer = setInterval(() => {
+    GS.timeLeft--;
+    document.getElementById('hud-time').textContent = GS.timeLeft + 's';
+    if (GS.timeLeft <= 0) stopGame(true);
   }, 1000);
 
-  gameLoop();
+  requestAnimationFrame(gameLoop);
+}
+
+function spawnTargets() {
+  if (!GS.running) return;
+  // 清理死亡目标
+  GS.targets = GS.targets.filter(t => t.alive);
+
+  const maxTargets = GS.mode === 'multi' ? 3 : 1;
+  const toSpawn = maxTargets - GS.targets.length;
+  for (let i = 0; i < toSpawn; i++) {
+    GS.targets.push(new Target(GS.mode));
+  }
+}
+
+function gameLoop(ts) {
+  if (!GS.running) return;
+  const dt = Math.min((ts - GS.lastFrame) / 1000, 0.05);
+  GS.lastFrame = ts;
+
+  // 更新
+  GS.targets.forEach(t => t.update(dt));
+  GS.targets = GS.targets.filter(t => t.alive);
+
+  // 超时未命中（peek / patrol 才算miss）
+  // 目标自然离场不计 miss，只有玩家主动点空才算
+
+  // 绘制
+  drawScene();
+
+  GS.animFrame = requestAnimationFrame(gameLoop);
+}
+
+function drawScene() {
+  ctx.clearRect(0, 0, W, H);
+
+  // 天空渐变
+  const sky = ctx.createLinearGradient(0, 0, 0, H * 0.55);
+  sky.addColorStop(0, '#1a2a3f');
+  sky.addColorStop(1, '#2a3f55');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, W, H * 0.55);
+
+  // 远山轮廓
+  drawMountains();
+
+  // 地面
+  const groundY = H * GROUND_RATIO;
+  const ground = ctx.createLinearGradient(0, groundY, 0, H);
+  ground.addColorStop(0, '#2a3a1e');
+  ground.addColorStop(0.3, '#1e2e14');
+  ground.addColorStop(1, '#111a0a');
+  ctx.fillStyle = ground;
+  ctx.fillRect(0, groundY, W, H - groundY);
+
+  // 地面线（有点纹理感）
+  ctx.strokeStyle = 'rgba(80,120,50,0.4)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0, groundY); ctx.lineTo(W, groundY); ctx.stroke();
+
+  // 掩体（peek 模式显示）
+  if (GS.mode === 'peek') drawCover();
+
+  // 距离标尺（地面上的线，增加临场感）
+  for (let d = 0; d < 5; d++) {
+    const y = groundY + d * (H - groundY) / 5;
+    ctx.strokeStyle = `rgba(60,100,40,${0.08 - d * 0.01})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+
+  // 绘制所有目标（按 footY 排序，远的先画）
+  GS.targets.sort((a, b) => a.footY - b.footY).forEach(t => t.draw(ctx));
+
+  // 准星区域提示线（中线附近淡淡的标注）
+  ctx.strokeStyle = 'rgba(0,212,255,0.06)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([8, 12]);
+  ctx.beginPath(); ctx.moveTo(0, groundY - FIGURE_H/2); ctx.lineTo(W, groundY - FIGURE_H/2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function drawMountains() {
+  ctx.fillStyle = '#1e3040';
+  ctx.beginPath();
+  ctx.moveTo(0, H * 0.52);
+  let x = 0;
+  while (x < W) {
+    const w = 80 + Math.random() * 120;
+    const h = 60 + Math.random() * 80;
+    ctx.lineTo(x + w/2, H * 0.52 - h);
+    ctx.lineTo(x + w, H * 0.52);
+    x += w;
+  }
+  ctx.lineTo(W, H * 0.52);
+  ctx.closePath();
+  ctx.fill();
+  // 前景树木轮廓
+  ctx.fillStyle = '#162510';
+  for (let tx = 0; tx < W; tx += 28 + Math.random() * 20) {
+    const th = 30 + Math.random() * 40;
+    ctx.fillRect(tx, H * GROUND_RATIO - th, 5 + Math.random() * 4, th);
+  }
+}
+
+// 记一下山的随机种子（防止每帧重绘抖动）
+let mountainDrawn = false, mountainCanvas;
+function getMountainCanvas() {
+  if (!mountainCanvas || mountainCanvas.width !== W) {
+    mountainCanvas = document.createElement('canvas');
+    mountainCanvas.width = W; mountainCanvas.height = H;
+    const mc = mountainCanvas.getContext('2d');
+    mc.fillStyle = '#1e3040';
+    mc.beginPath(); mc.moveTo(0, H * 0.52);
+    let x = 0;
+    const rng = seededRand(42);
+    while (x < W) {
+      const w = 80 + rng() * 120, h = 60 + rng() * 80;
+      mc.lineTo(x + w/2, H * 0.52 - h); mc.lineTo(x + w, H * 0.52); x += w;
+    }
+    mc.lineTo(W, H * 0.52); mc.closePath(); mc.fill();
+    mc.fillStyle = '#162510';
+    const rng2 = seededRand(99);
+    for (let tx = 0; tx < W; tx += 28 + rng2() * 20) {
+      const th = 30 + rng2() * 40;
+      mc.fillRect(tx, H * GROUND_RATIO - th, 5 + rng2() * 4, th);
+    }
+  }
+  return mountainCanvas;
+}
+
+function seededRand(seed) {
+  let s = seed;
+  return () => { s = (s * 16807 + 0) % 2147483647; return (s - 1) / 2147483646; };
+}
+
+// 重写 drawScene 用缓存背景
+function drawScene() {
+  ctx.clearRect(0, 0, W, H);
+  const groundY = H * GROUND_RATIO;
+
+  // 天空
+  const sky = ctx.createLinearGradient(0, 0, 0, groundY);
+  sky.addColorStop(0, '#1a2535'); sky.addColorStop(1, '#243550');
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, W, groundY);
+
+  // 山（缓存）
+  try { ctx.drawImage(getMountainCanvas(), 0, 0); } catch(e) { /* skip */ }
+
+  // 地面
+  const ground = ctx.createLinearGradient(0, groundY, 0, H);
+  ground.addColorStop(0, '#263a18'); ground.addColorStop(0.4, '#1a2810'); ground.addColorStop(1, '#0e1708');
+  ctx.fillStyle = ground; ctx.fillRect(0, groundY, W, H - groundY);
+  ctx.strokeStyle = 'rgba(80,130,50,0.5)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0, groundY); ctx.lineTo(W, groundY); ctx.stroke();
+
+  // 掩体
+  if (GS.mode === 'peek') drawCover();
+
+  // 目标（按远近排序）
+  GS.targets.sort((a,b) => a.footY - b.footY).forEach(t => t.draw(ctx));
+
+  // 中线瞄准提示
+  ctx.strokeStyle = 'rgba(0,212,255,0.05)';
+  ctx.lineWidth = 1; ctx.setLineDash([6,14]);
+  ctx.beginPath(); ctx.moveTo(0, groundY - FIGURE_H * 0.55); ctx.lineTo(W, groundY - FIGURE_H * 0.55); ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function drawCover() {
+  // 简单的掩体方块
+  const groundY = H * GROUND_RATIO;
+  ctx.fillStyle = '#3a3020';
+  ctx.strokeStyle = '#2a2010';
+  ctx.lineWidth = 2;
+  [[W*0.15, groundY-40, 55, 40], [W*0.55, groundY-50, 65, 50], [W*0.8, groundY-35, 50, 35]].forEach(([x,y,w,h])=>{
+    ctx.fillRect(x, y, w, h); ctx.strokeRect(x, y, w, h);
+    // 沙袋纹理
+    ctx.fillStyle = '#4a3828';
+    ctx.fillRect(x+4, y+6, w-8, 10); ctx.fillRect(x+4, y+22, w-8, 10);
+    ctx.fillStyle = '#3a3020';
+  });
+}
+
+// 点击事件
+wrap.addEventListener('click', e => {
+  if (!GS.running) return;
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = W / rect.width, scaleY = H / rect.height;
+  const cx = (e.clientX - rect.left) * scaleX;
+  const cy = (e.clientY - rect.top) * scaleY;
+
+  let hitAny = false;
+  for (const t of GS.targets) {
+    if (!t.alive || t.hit) continue;
+    const result = t.checkHit(cx, cy);
+    if (result) {
+      t.hit = true;
+      const rt = Date.now() - t.born;
+      GS.reactionTimes.push(rt);
+      GS.hits++;
+      if (result === 'head') GS.headshots++;
+      GS.combo++;
+      if (GS.combo > GS.maxCombo) GS.maxCombo = GS.combo;
+      hitAny = true;
+      updateHUD();
+      showHitEffect(e.clientX - rect.left, e.clientY - rect.top, result);
+      break;
+    }
+  }
+  if (!hitAny) {
+    GS.misses++;
+    GS.combo = 0;
+    updateHUD();
+    // 空击闪烁
+    showMissEffect(e.clientX - rect.left, e.clientY - rect.top);
+  }
+});
+
+function showHitEffect(x, y, type) {
+  const el = document.createElement('div');
+  el.className = 'hit-effect' + (type === 'head' ? ' headshot' : '');
+  el.textContent = type === 'head' ? '💥 爆头!' : (GS.combo >= 3 ? `🔥 x${GS.combo}` : '✓');
+  el.style.left = (x - 20) + 'px'; el.style.top = (y - 10) + 'px';
+  wrap.appendChild(el);
+  setTimeout(() => el.remove(), 700);
+}
+
+function showMissEffect(x, y) {
+  const el = document.createElement('div');
+  el.className = 'hit-effect';
+  el.style.color = '#64748b';
+  el.textContent = '✗';
+  el.style.left = (x - 6) + 'px'; el.style.top = (y - 10) + 'px';
+  wrap.appendChild(el);
+  setTimeout(() => el.remove(), 500);
+}
+
+function updateHUD() {
+  const total = GS.hits + GS.misses;
+  const acc = total > 0 ? Math.round(GS.hits / total * 100) + '%' : '-';
+  const hs = GS.hits > 0 ? Math.round(GS.headshots / GS.hits * 100) + '%' : '-';
+  const avgRt = GS.reactionTimes.length > 0
+    ? Math.round(GS.reactionTimes.reduce((a,b)=>a+b,0)/GS.reactionTimes.length) + 'ms' : '-';
+  document.getElementById('hud-hits').textContent = GS.hits;
+  document.getElementById('hud-miss').textContent = GS.misses;
+  document.getElementById('hud-acc').textContent = acc;
+  document.getElementById('hud-hs').textContent = hs;
+  document.getElementById('hud-rt').textContent = avgRt;
+  document.getElementById('hud-combo').textContent = 'x' + GS.combo;
 }
 
 function stopGame(showResult = true) {
-  gameState.running = false;
-  clearInterval(gameState.timer);
-  clearInterval(gameState.spawnTimer);
-  cancelAnimationFrame(gameState.animFrame);
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  document.getElementById('startBtn').textContent = '开始训练';
-  document.getElementById('startBtn').classList.remove('stop');
+  GS.running = false;
+  clearInterval(GS.timer); clearInterval(GS.spawnInterval);
+  cancelAnimationFrame(GS.animFrame);
+  ctx.clearRect(0, 0, W, H);
+  const btn = document.getElementById('startBtn');
+  btn.textContent = '开始训练'; btn.classList.remove('stop');
   document.getElementById('hud-time').textContent = '60s';
-
-  if (showResult && (gameState.hits + gameState.misses > 0)) {
-    showResultModal();
-  } else {
-    document.getElementById('start-overlay').style.display = 'flex';
-  }
+  if (showResult && (GS.hits + GS.misses > 0)) showResultModal();
+  else document.getElementById('start-overlay').style.display = 'flex';
 }
 
-function retryGame() {
-  closeResult();
-  setTimeout(startGame, 100);
+function showResultModal() {
+  const total = GS.hits + GS.misses;
+  const acc = total > 0 ? Math.round(GS.hits / total * 100) : 0;
+  const hs = GS.hits > 0 ? Math.round(GS.headshots / GS.hits * 100) : 0;
+  const avgRt = GS.reactionTimes.length > 0
+    ? Math.round(GS.reactionTimes.reduce((a,b)=>a+b,0)/GS.reactionTimes.length) : 0;
+  const grade = acc >= 85 ? 'S' : acc >= 70 ? 'A' : acc >= 55 ? 'B' : 'C';
+  const gc = {S:'#00d4ff',A:'#00ff88',B:'#ff6b35',C:'#64748b'}[grade];
+  const modeNames = {patrol:'巡逻模式',sprint:'冲刺模式',peek:'探头模式',multi:'多目标'};
+  document.getElementById('result-body').innerHTML = `
+    <div class="result-row"><span>模式</span><span class="val">${modeNames[GS.mode]}</span></div>
+    <div class="result-row"><span>命中 / 总射击</span><span class="val">${GS.hits} / ${total}</span></div>
+    <div class="result-row"><span>命中率</span><span class="val">${acc}%</span></div>
+    <div class="result-row"><span>爆头率</span><span class="val" style="color:#ffd700">${hs}%</span></div>
+    <div class="result-row"><span>平均反应时间</span><span class="val">${avgRt}ms</span></div>
+    <div class="result-row"><span>最高连击</span><span class="val">x${GS.maxCombo}</span></div>
+    <div class="result-row"><span>评级</span><span class="val" style="color:${gc};font-size:26px">${grade}</span></div>
+  `;
+  document.getElementById('result-modal').classList.add('show');
+  saveRecord({ acc, hs, avgRt, combo: GS.maxCombo, grade, hits: GS.hits, total, mode: GS.mode, time: new Date().toLocaleString('zh-CN') });
 }
 
+function retryGame() { closeResult(); setTimeout(startGame, 80); }
 function closeResult() {
   document.getElementById('result-modal').classList.remove('show');
   document.getElementById('start-overlay').style.display = 'flex';
 }
 
-function showResultModal() {
-  const total = gameState.hits + gameState.misses;
-  const acc = total > 0 ? Math.round(gameState.hits / total * 100) : 0;
-  const avgRt = gameState.reactionTimes.length > 0
-    ? Math.round(gameState.reactionTimes.reduce((a,b)=>a+b,0)/gameState.reactionTimes.length)
-    : 0;
-  const grade = acc >= 85 ? 'S' : acc >= 70 ? 'A' : acc >= 55 ? 'B' : 'C';
-  const gradeColor = {S:'#00d4ff',A:'#00ff88',B:'#ff6b35',C:'#64748b'}[grade];
-
-  document.getElementById('result-body').innerHTML = `
-    <div class="result-row"><span>模式</span><span class="val">${{static:'静态靶',moving:'移动靶',tracking:'追踪靶',flick:'闪现靶'}[gameState.mode]}</span></div>
-    <div class="result-row"><span>命中 / 总数</span><span class="val">${gameState.hits} / ${total}</span></div>
-    <div class="result-row"><span>命中率</span><span class="val">${acc}%</span></div>
-    <div class="result-row"><span>平均反应时间</span><span class="val">${avgRt}ms</span></div>
-    <div class="result-row"><span>最高连击</span><span class="val">x${gameState.maxCombo}</span></div>
-    <div class="result-row"><span>评级</span><span class="val" style="color:${gradeColor};font-size:24px">${grade}</span></div>
-  `;
-  document.getElementById('result-modal').classList.add('show');
-
-  // 保存记录
-  saveRecord({ acc, avgRt, combo: gameState.maxCombo, grade, hits: gameState.hits, total,
-    mode: gameState.mode, time: new Date().toLocaleString('zh-CN') });
-}
-
-// 生成靶
-function spawnTarget() {
-  if (!gameState.running) return;
-  const margin = 60;
-  const w = canvas.width, h = canvas.height;
-  const size = gameState.mode === 'flick' ? (Math.random() * 15 + 12) : (Math.random() * 20 + 18);
-
-  const target = {
-    x: margin + Math.random() * (w - margin * 2),
-    y: margin + Math.random() * (h - margin * 2),
-    size,
-    born: Date.now(),
-    vx: (Math.random() - 0.5) * 4,
-    vy: (Math.random() - 0.5) * 4,
-    life: gameState.mode === 'flick' ? 600 + Math.random() * 400 : 99999,
-    alpha: 1,
-  };
-
-  if (gameState.mode === 'static') {
-    gameState.targets = [target]; // 只有一个
-  } else if (gameState.mode === 'flick') {
-    gameState.targets = [target];
-  } else {
-    gameState.targets.push(target);
-    if (gameState.targets.length > 4) gameState.targets.shift();
-  }
-}
-
-let trackingTarget = null;
-
-function gameLoop() {
-  if (!gameState.running) return;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // 绘制网格背景
-  ctx.strokeStyle = 'rgba(255,255,255,0.03)';
-  ctx.lineWidth = 1;
-  for (let x = 0; x < canvas.width; x += 40) {
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
-  }
-  for (let y = 0; y < canvas.height; y += 40) {
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
-  }
-
-  const now = Date.now();
-
-  if (gameState.mode === 'tracking') {
-    // 追踪模式：一个持续移动的靶
-    if (!trackingTarget) {
-      trackingTarget = {
-        x: canvas.width/2, y: canvas.height/2,
-        vx: 2 + Math.random()*2, vy: 1.5 + Math.random()*2
-      };
-    }
-    trackingTarget.x += trackingTarget.vx;
-    trackingTarget.y += trackingTarget.vy;
-    if (trackingTarget.x < 40 || trackingTarget.x > canvas.width-40) trackingTarget.vx *= -1;
-    if (trackingTarget.y < 40 || trackingTarget.y > canvas.height-40) trackingTarget.vy *= -1;
-    drawTarget(trackingTarget.x, trackingTarget.y, 30, 1, now);
-  } else {
-    // 其他模式
-    gameState.targets = gameState.targets.filter(t => {
-      const age = now - t.born;
-      if (gameState.mode === 'moving') {
-        t.x += t.vx; t.y += t.vy;
-        if (t.x < 40 || t.x > canvas.width-40) t.vx *= -1;
-        if (t.y < 40 || t.y > canvas.height-40) t.vy *= -1;
-      }
-      if (age > t.life) {
-        // 超时消失（闪现模式）
-        gameState.misses++;
-        gameState.combo = 0;
-        updateHUD();
-        spawnTarget();
-        return false;
-      }
-      const progress = Math.min(age / t.life, 1);
-      drawTarget(t.x, t.y, t.size, 1 - progress * 0.3, now);
-      return true;
-    });
-  }
-
-  gameState.animFrame = requestAnimationFrame(gameLoop);
-}
-
-function drawTarget(x, y, size, alpha, now) {
-  // 外圈光晕
-  const grd = ctx.createRadialGradient(x, y, 0, x, y, size * 2);
-  grd.addColorStop(0, `rgba(255,107,53,${0.15 * alpha})`);
-  grd.addColorStop(1, 'transparent');
-  ctx.fillStyle = grd;
-  ctx.beginPath();
-  ctx.arc(x, y, size * 2, 0, Math.PI * 2);
-  ctx.fill();
-
-  // 主圆
-  ctx.globalAlpha = alpha;
-  ctx.strokeStyle = '#ff6b35';
-  ctx.lineWidth = 2.5;
-  ctx.fillStyle = 'rgba(255,107,53,0.15)';
-  ctx.beginPath();
-  ctx.arc(x, y, size, 0, Math.PI * 2);
-  ctx.fill(); ctx.stroke();
-
-  // 内圈
-  ctx.strokeStyle = 'rgba(255,200,150,0.6)';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.arc(x, y, size * 0.5, 0, Math.PI * 2);
-  ctx.stroke();
-
-  // 中心点
-  ctx.fillStyle = '#ff6b35';
-  ctx.beginPath();
-  ctx.arc(x, y, 3, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.globalAlpha = 1;
-}
-
-// 点击检测
-wrap.addEventListener('click', e => {
-  if (!gameState.running) return;
-  const rect = canvas.getBoundingClientRect();
-  const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
-  const my = (e.clientY - rect.top) * (canvas.height / rect.height);
-
-  if (gameState.mode === 'tracking') {
-    const dx = mx - trackingTarget.x, dy = my - trackingTarget.y;
-    if (Math.sqrt(dx*dx + dy*dy) < 34) {
-      onHit(e.clientX - rect.left, e.clientY - rect.top);
-    } else {
-      onMiss();
-    }
-    return;
-  }
-
-  let hit = false;
-  for (let i = gameState.targets.length - 1; i >= 0; i--) {
-    const t = gameState.targets[i];
-    const dx = mx - t.x, dy = my - t.y;
-    if (Math.sqrt(dx*dx + dy*dy) < t.size + 4) {
-      gameState.reactionTimes.push(Date.now() - t.born);
-      gameState.targets.splice(i, 1);
-      onHit(e.clientX - rect.left, e.clientY - rect.top);
-      if (gameState.mode === 'static' || gameState.mode === 'flick') spawnTarget();
-      hit = true;
-      break;
-    }
-  }
-  if (!hit) onMiss();
-});
-
-function onHit(px, py) {
-  gameState.hits++;
-  gameState.combo++;
-  if (gameState.combo > gameState.maxCombo) gameState.maxCombo = gameState.combo;
-  updateHUD();
-  showComboToast(px, py);
-}
-
-function onMiss() {
-  gameState.misses++;
-  gameState.combo = 0;
-  updateHUD();
-}
-
-function showComboToast(x, y) {
-  if (gameState.combo < 2) return;
-  const el = document.createElement('div');
-  el.className = 'combo-toast';
-  el.textContent = gameState.combo >= 5 ? `🔥 x${gameState.combo} COMBO!` : `x${gameState.combo}`;
-  el.style.left = x + 'px';
-  el.style.top = (y - 20) + 'px';
-  wrap.appendChild(el);
-  setTimeout(() => el.remove(), 800);
-}
-
-function updateHUD() {
-  const total = gameState.hits + gameState.misses;
-  const acc = total > 0 ? Math.round(gameState.hits / total * 100) : '-';
-  const avgRt = gameState.reactionTimes.length > 0
-    ? Math.round(gameState.reactionTimes.reduce((a,b)=>a+b,0)/gameState.reactionTimes.length)
-    : '-';
-  document.getElementById('hud-hits').textContent = gameState.hits;
-  document.getElementById('hud-miss').textContent = gameState.misses;
-  document.getElementById('hud-acc').textContent = acc + (acc !== '-' ? '%' : '');
-  document.getElementById('hud-rt').textContent = avgRt + (avgRt !== '-' ? 'ms' : '');
-  document.getElementById('hud-combo').textContent = 'x' + gameState.combo;
-}
-
-// ==================== 灵敏度 ====================
-let sensCtx, sensTarget, sensMouseX = -1, sensMouseY = -1;
+// ========== 灵敏度 ==========
+let sensCtx2, sensTarget2, sensMouseX = -1, sensMouseY = -1, sensAnimId;
 
 function initSensCanvas() {
+  if (sensAnimId) cancelAnimationFrame(sensAnimId);
   const sc = document.getElementById('sensCanvas');
-  const parent = sc.parentElement;
-  sc.width = parent.clientWidth - 48;
-  sc.height = 240;
-  sensCtx = sc.getContext('2d');
-
-  sensTarget = { x: sc.width/2, y: sc.height/2, vx: 1.8, vy: 1.3 };
-
+  sc.width = sc.parentElement.clientWidth - 44;
+  sc.height = 200;
+  sensCtx2 = sc.getContext('2d');
+  const gY = sc.height * 0.7;
+  sensTarget2 = { x: sc.width/2, footY: gY, vx: 1.6, vy: 0 };
   sc.addEventListener('mousemove', e => {
     const r = sc.getBoundingClientRect();
     sensMouseX = (e.clientX - r.left) * (sc.width / r.width);
     sensMouseY = (e.clientY - r.top) * (sc.height / r.height);
   });
-
-  function drawSens() {
-    if (!sensCtx) return;
+  function loop() {
     const w = sc.width, h = sc.height;
-    sensCtx.fillStyle = '#080d14';
-    sensCtx.fillRect(0, 0, w, h);
+    sensCtx2.fillStyle = '#0a0e1a'; sensCtx2.fillRect(0,0,w,h);
+    sensCtx2.fillStyle = '#1a2a18'; sensCtx2.fillRect(0, gY, w, h-gY);
+    sensCtx2.strokeStyle = 'rgba(80,130,50,0.4)'; sensCtx2.lineWidth = 1;
+    sensCtx2.beginPath(); sensCtx2.moveTo(0,gY); sensCtx2.lineTo(w,gY); sensCtx2.stroke();
 
-    // 网格
-    sensCtx.strokeStyle = 'rgba(255,255,255,0.04)';
-    sensCtx.lineWidth = 1;
-    for (let x = 0; x < w; x+=30) { sensCtx.beginPath(); sensCtx.moveTo(x,0); sensCtx.lineTo(x,h); sensCtx.stroke(); }
-    for (let y = 0; y < h; y+=30) { sensCtx.beginPath(); sensCtx.moveTo(0,y); sensCtx.lineTo(w,y); sensCtx.stroke(); }
+    sensTarget2.x += sensTarget2.vx;
+    if (sensTarget2.x < 30 || sensTarget2.x > w-30) sensTarget2.vx *= -1;
 
-    // 移动靶
-    sensTarget.x += sensTarget.vx;
-    sensTarget.y += sensTarget.vy;
-    if (sensTarget.x < 25 || sensTarget.x > w-25) sensTarget.vx *= -1;
-    if (sensTarget.y < 25 || sensTarget.y > h-25) sensTarget.vy *= -1;
+    // 画人形
+    const tx = sensTarget2.x, foot = sensTarget2.footY;
+    const headY = foot - 52 + 9;
+    sensCtx2.fillStyle = '#4a7a5a';
+    sensCtx2.beginPath(); sensCtx2.roundRect(tx-10, headY+12, 20, 28, 3); sensCtx2.fill();
+    sensCtx2.fillStyle = '#c8a882';
+    sensCtx2.beginPath(); sensCtx2.arc(tx, headY, 9, 0, Math.PI*2); sensCtx2.fill();
 
-    // 连线（鼠标→靶）
+    // 鼠标点
     if (sensMouseX > 0) {
-      const dx = sensTarget.x - sensMouseX, dy = sensTarget.y - sensMouseY;
-      const dist = Math.sqrt(dx*dx + dy*dy);
-      sensCtx.strokeStyle = `rgba(0,212,255,${Math.max(0, 1 - dist/300)})`;
-      sensCtx.lineWidth = 1;
-      sensCtx.setLineDash([4,4]);
-      sensCtx.beginPath(); sensCtx.moveTo(sensMouseX, sensMouseY); sensCtx.lineTo(sensTarget.x, sensTarget.y); sensCtx.stroke();
-      sensCtx.setLineDash([]);
+      sensCtx2.strokeStyle = 'rgba(0,212,255,0.3)'; sensCtx2.setLineDash([4,6]);
+      sensCtx2.beginPath(); sensCtx2.moveTo(sensMouseX, sensMouseY); sensCtx2.lineTo(tx, headY); sensCtx2.stroke();
+      sensCtx2.setLineDash([]);
+      sensCtx2.fillStyle = '#00d4ff'; sensCtx2.shadowColor = '#00d4ff'; sensCtx2.shadowBlur = 8;
+      sensCtx2.beginPath(); sensCtx2.arc(sensMouseX, sensMouseY, 4, 0, Math.PI*2); sensCtx2.fill();
+      sensCtx2.shadowBlur = 0;
     }
-
-    // 靶
-    sensCtx.strokeStyle = '#ff6b35';
-    sensCtx.lineWidth = 2;
-    sensCtx.fillStyle = 'rgba(255,107,53,0.15)';
-    sensCtx.beginPath(); sensCtx.arc(sensTarget.x, sensTarget.y, 22, 0, Math.PI*2); sensCtx.fill(); sensCtx.stroke();
-    sensCtx.strokeStyle = 'rgba(255,200,150,0.4)';
-    sensCtx.lineWidth = 1.5;
-    sensCtx.beginPath(); sensCtx.arc(sensTarget.x, sensTarget.y, 10, 0, Math.PI*2); sensCtx.stroke();
-
-    // 鼠标
-    if (sensMouseX > 0) {
-      sensCtx.fillStyle = '#00d4ff';
-      sensCtx.shadowColor = '#00d4ff';
-      sensCtx.shadowBlur = 8;
-      sensCtx.beginPath(); sensCtx.arc(sensMouseX, sensMouseY, 5, 0, Math.PI*2); sensCtx.fill();
-      sensCtx.shadowBlur = 0;
-    }
-
-    requestAnimationFrame(drawSens);
+    sensAnimId = requestAnimationFrame(loop);
   }
-  drawSens();
+  loop();
   updateSens();
 }
 
@@ -974,20 +993,12 @@ function updateSens() {
   const dpi = +document.getElementById('dpi').value;
   const igs = +document.getElementById('igs').value;
   const ads = +document.getElementById('ads').value;
-
   document.getElementById('dpi-val').textContent = dpi;
   document.getElementById('igs-val').textContent = igs;
   document.getElementById('ads-val').textContent = ads.toFixed(2);
-
-  // eDPI 计算
   const eDPI = dpi * (igs / 100) * 2;
-  // 360°距离 (cm) ≈ (2.54 × 360) / (eDPI × yaw_rate)
-  // 三角洲行动 yaw ≈ 0.022 (类 CoD 换算)
-  const yaw = 0.022;
-  const cm360 = (2.54 * 360) / (eDPI * yaw);
+  const cm360 = (2.54 * 360) / (eDPI * 0.022);
   document.getElementById('cm360').textContent = cm360.toFixed(1);
-
-  // 各游戏换算（基于相同 eDPI）
   document.getElementById('conv-delta').textContent = igs;
   document.getElementById('conv-cs').textContent = (eDPI / dpi / 3.18).toFixed(2);
   document.getElementById('conv-val').textContent = (eDPI / dpi / 3.18 * 1.2).toFixed(2);
@@ -996,52 +1007,34 @@ function updateSens() {
   document.getElementById('conv-ow').textContent = (eDPI / dpi / 3.18 * 10.6).toFixed(1);
 }
 
-// ==================== 数据统计 ====================
+// ========== 统计 ==========
 function saveRecord(r) {
-  const history = JSON.parse(localStorage.getItem('aimtrainer_history') || '[]');
-  history.unshift(r);
-  if (history.length > 50) history.pop();
-  localStorage.setItem('aimtrainer_history', JSON.stringify(history));
+  const h = JSON.parse(localStorage.getItem('aimtrainer_v2') || '[]');
+  h.unshift(r); if (h.length > 50) h.pop();
+  localStorage.setItem('aimtrainer_v2', JSON.stringify(h));
 }
-
 function renderStats() {
-  const history = JSON.parse(localStorage.getItem('aimtrainer_history') || '[]');
-  document.getElementById('s-total').textContent = history.length;
-
-  if (history.length > 0) {
-    const avgAcc = Math.round(history.reduce((a,b)=>a+b.acc,0)/history.length);
-    const rtRecords = history.filter(r=>r.avgRt>0);
-    const avgRt = rtRecords.length>0 ? Math.round(rtRecords.reduce((a,b)=>a+b.avgRt,0)/rtRecords.length) : 0;
-    const maxCombo = Math.max(...history.map(r=>r.combo));
-    document.getElementById('s-avgacc').textContent = avgAcc + '%';
-    document.getElementById('s-avgrt').textContent = avgRt || '-';
-    document.getElementById('s-combo').textContent = maxCombo;
+  const h = JSON.parse(localStorage.getItem('aimtrainer_v2') || '[]');
+  document.getElementById('s-total').textContent = h.length;
+  if (h.length > 0) {
+    document.getElementById('s-avgacc').textContent = Math.round(h.reduce((a,b)=>a+b.acc,0)/h.length) + '%';
+    const rts = h.filter(r=>r.avgRt>0);
+    document.getElementById('s-avgrt').textContent = rts.length ? Math.round(rts.reduce((a,b)=>a+b.avgRt,0)/rts.length) + 'ms' : '-';
+    document.getElementById('s-combo').textContent = Math.max(...h.map(r=>r.combo));
   }
-
   const tbody = document.getElementById('history-body');
-  if (history.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px">暂无记录，开始你的第一局训练吧 🎯</td></tr>';
-    return;
-  }
-  const modeNames = {static:'静态靶',moving:'移动靶',tracking:'追踪靶',flick:'闪现靶'};
-  tbody.innerHTML = history.map(r => `
-    <tr>
-      <td>${r.time}</td>
-      <td>${modeNames[r.mode]||r.mode}</td>
-      <td>${r.hits} / ${r.total}</td>
-      <td>${r.acc}%</td>
-      <td>${r.avgRt || '-'}ms</td>
-      <td>x${r.combo}</td>
-      <td><span class="tag tag-${r.grade.toLowerCase()}">${r.grade}</span></td>
-    </tr>
-  `).join('');
+  if (!h.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:24px">暂无记录 🎯</td></tr>'; return; }
+  const mn = {patrol:'巡逻',sprint:'冲刺',peek:'探头',multi:'多目标'};
+  tbody.innerHTML = h.map(r=>`<tr>
+    <td>${r.time}</td><td>${mn[r.mode]||r.mode}</td>
+    <td>${r.hits}/${r.total}</td><td>${r.acc}%</td>
+    <td style="color:#ffd700">${r.hs||'-'}%</td>
+    <td>${r.avgRt||'-'}ms</td><td>x${r.combo}</td>
+    <td><span class="tag tag-${r.grade.toLowerCase()}">${r.grade}</span></td>
+  </tr>`).join('');
 }
-
 function clearHistory() {
-  if (confirm('确定清除所有训练记录？')) {
-    localStorage.removeItem('aimtrainer_history');
-    renderStats();
-  }
+  if (confirm('确定清除所有训练记录？')) { localStorage.removeItem('aimtrainer_v2'); renderStats(); }
 }
 </script>
 </body>

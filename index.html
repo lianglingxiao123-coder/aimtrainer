@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🎯 三角洲练枪训练营 v1.3</title>
+<title>🎯 三角洲练枪训练营 v1.4</title>
 <style>
   :root {
     --bg: #0a0e1a; --panel: #111827; --border: #1f2937;
@@ -114,7 +114,7 @@
 <body>
 
 <header>
-  <div class="logo">🎯 <span>三角洲</span> 练枪训练营 <small style="font-size:11px;opacity:.6;font-weight:400">v1.3</small></div>
+  <div class="logo">🎯 <span>三角洲</span> 练枪训练营 <small style="font-size:11px;opacity:.6;font-weight:400">v1.4</small></div>
   <div class="nav-tabs">
     <button class="nav-tab active" onclick="switchPage('arena',this)">🎮 训练场</button>
     <button class="nav-tab" onclick="switchPage('sens',this)">⚙️ 灵敏度</button>
@@ -274,16 +274,24 @@ wrap.addEventListener('mousemove', e => {
   mouseX = e.clientX - r.left;
   mouseY = e.clientY - r.top;
   crosshairEl.style.left = mouseX + 'px';
-  crosshairEl.style.top  = mouseY + 'px';
+  // top 由 syncCrosshair() 统一更新（含后坐力偏移）
 });
+
+// 每帧同步准星视觉位置（含后坐力上浮）
+function syncCrosshair(){
+  crosshairEl.style.left = mouseX + 'px';
+  crosshairEl.style.top  = (mouseY - recoilY) + 'px';
+  requestAnimationFrame(syncCrosshair);
+}
+syncCrosshair();
 
 // ── 后坐力状态 ──
 let recoilY = 0;          // 当前累计后坐力（像素，准星向上偏移）
 let recoilX = 0;          // 水平抖动
-const RECOIL_PER_SHOT = 7;   // 每发上跳像素
-const RECOIL_HORIZ    = 3.5; // 水平随机抖动幅度
-const RECOIL_RECOVERY = 200; // 每秒恢复像素
-const RECOIL_MAX      = 80;  // 最大累积
+const RECOIL_PER_SHOT = 18;   // 每发上跳像素（提升，持续按住会明显上飘）
+const RECOIL_HORIZ    = 6.0;  // 水平随机抖动幅度
+const RECOIL_RECOVERY = 140;  // 每秒恢复像素（恢复变慢，让后坐力更压迫）
+const RECOIL_MAX      = 200;  // 最大累积（上限大幅提升）
 
 // ── 射击参数 ──
 let mouseDown = false, shootTimer = null;
@@ -379,13 +387,18 @@ class Target {
     this.footY     = gY - dNorm * (gY * 0.28) + (Math.random()-0.5) * H * 0.04;
     this.baseFootY = this.footY;
 
-    // 出现位置：65% 随机屏幕内，35% 从边缘进入
+    // 出现位置：避开左右各10%；65%随机屏幕中段，35%从边缘稍内侧进入
+    const MARGIN = 0.10; // 左右各10%不出现
     const fromEdge = (mode === 'peek') || Math.random() < 0.35;
     if(fromEdge){
       this.dir = Math.random() < 0.5 ? 1 : -1;
-      this.x   = this.dir > 0 ? -50 : W + 50;
+      // 从边缘进入：起点略在屏幕外但靠近边缘（而不是-50/W+50绝对边缘）
+      this.x   = this.dir > 0
+        ? -(20 + Math.random() * 30)
+        : W + (20 + Math.random() * 30);
     } else {
-      this.x   = W * 0.08 + Math.random() * W * 0.84;
+      // 随机分布在可见区域中段（避开左右10%）
+      this.x   = W * MARGIN + Math.random() * W * (1 - 2 * MARGIN);
       this.dir = Math.random() < 0.5 ? 1 : -1;
     }
 
@@ -594,15 +607,68 @@ class Target {
     ctx.strokeStyle = skinC; ctx.lineWidth = this.headR * 0.55; ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(x, shoulderY); ctx.lineTo(x, headCY + this.headR); ctx.stroke();
 
-    // ── 头部 ──
+    // ── 头部（蜂医风格）──
+    // 1. 脸/头皮
     ctx.fillStyle = skinC; ctx.strokeStyle = tintColor ? tintColor : '#a07050'; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.arc(x, headCY, this.headR, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-    // 头盔
-    ctx.fillStyle = helmC;
-    ctx.beginPath(); ctx.ellipse(x, headCY - this.headR*0.12, this.headR + 2*s, this.headR*0.68, 0, Math.PI, 0); ctx.fill();
-    // 护目镜
-    ctx.fillStyle = 'rgba(0,200,230,0.28)';
-    ctx.beginPath(); ctx.ellipse(x + gd*this.headR*0.22, headCY + this.headR*0.08, this.headR*0.62, this.headR*0.3, 0, 0, Math.PI*2); ctx.fill();
+
+    // 2. 头盔主体（军绿色，盖住上半头，略宽）
+    const hC = tintColor || '#2d4a22';
+    ctx.fillStyle = hC;
+    ctx.beginPath();
+    ctx.ellipse(x, headCY - this.headR*0.05, this.headR*1.18, this.headR*0.82, 0, Math.PI, 0);
+    ctx.fill();
+    // 头盔侧沿（略突出）
+    ctx.fillStyle = tintColor || '#243d1b';
+    ctx.beginPath();
+    ctx.ellipse(x, headCY - this.headR*0.05, this.headR*1.28, this.headR*0.30, 0, Math.PI, 0);
+    ctx.fill();
+
+    // 3. 护目镜（蜂医标志：大圆护目镜，黄绿色镜片）
+    const goggleX = x + gd * this.headR * 0.18;
+    const goggleY = headCY + this.headR * 0.05;
+    const goggleRX = this.headR * 0.72;
+    const goggleRY = this.headR * 0.38;
+    // 护目镜框
+    ctx.strokeStyle = tintColor || '#1a2e10';
+    ctx.lineWidth = this.headR * 0.18;
+    ctx.beginPath();
+    ctx.ellipse(goggleX, goggleY, goggleRX, goggleRY, 0, 0, Math.PI*2);
+    ctx.stroke();
+    // 护目镜镜片
+    ctx.fillStyle = tintColor ? 'rgba(255,255,255,0.25)' : 'rgba(140,210,80,0.32)';
+    ctx.beginPath();
+    ctx.ellipse(goggleX, goggleY, goggleRX, goggleRY, 0, 0, Math.PI*2);
+    ctx.fill();
+    // 镜片高光
+    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    ctx.beginPath();
+    ctx.ellipse(goggleX - goggleRX*0.2, goggleY - goggleRY*0.25, goggleRX*0.35, goggleRY*0.3, -0.3, 0, Math.PI*2);
+    ctx.fill();
+
+    // 4. 头盔上的红十字医疗标识（蜂医特征）
+    if(!tintColor){
+      const cxPos = x - gd * this.headR * 0.55;
+      const cyPos = headCY - this.headR * 0.38;
+      const cs = this.headR * 0.22;
+      ctx.fillStyle = '#cc1111';
+      ctx.fillRect(cxPos - cs*0.35, cyPos - cs, cs*0.7, cs*2);
+      ctx.fillRect(cxPos - cs, cyPos - cs*0.35, cs*2, cs*0.7);
+    }
+
+    // 5. 头盔顶部天线/通讯器（小细节）
+    if(!tintColor){
+      ctx.strokeStyle = '#4a6a3a';
+      ctx.lineWidth = this.headR * 0.12;
+      ctx.beginPath();
+      ctx.moveTo(x + gd*this.headR*0.5, headCY - this.headR*0.75);
+      ctx.lineTo(x + gd*this.headR*0.5, headCY - this.headR*1.35);
+      ctx.stroke();
+      ctx.fillStyle = '#88aa44';
+      ctx.beginPath();
+      ctx.arc(x + gd*this.headR*0.5, headCY - this.headR*1.35, this.headR*0.1, 0, Math.PI*2);
+      ctx.fill();
+    }
 
     // ── 血条 ──
     if(!this.dying && this.hp < this.maxHp){

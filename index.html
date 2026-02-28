@@ -238,6 +238,20 @@ function switchPage(n,btn){
   if(n==='stats') renderStats();
 }
 
+// ── roundRect polyfill（兼容旧浏览器）──
+if(!CanvasRenderingContext2D.prototype.roundRect){
+  CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){
+    r=Math.min(r,w/2,h/2);
+    this.beginPath();
+    this.moveTo(x+r,y);
+    this.lineTo(x+w-r,y); this.arcTo(x+w,y,x+w,y+r,r);
+    this.lineTo(x+w,y+h-r); this.arcTo(x+w,y+h,x+w-r,y+h,r);
+    this.lineTo(x+r,y+h); this.arcTo(x,y+h,x,y+h-r,r);
+    this.lineTo(x,y+r); this.arcTo(x,y,x+r,y,r);
+    this.closePath();
+  };
+}
+
 // ── Canvas 设置 ──
 const canvas=document.getElementById('gameCanvas');
 const ctx=canvas.getContext('2d');
@@ -260,27 +274,9 @@ wrap.addEventListener('mousemove',e=>{
   crosshairEl.style.left=mouseX+'px'; crosshairEl.style.top=mouseY+'px';
 });
 
-// ── 持续射击 ──
+// ── 持续射击（事件绑定延迟到页面加载完成，确保 GS 和 doShoot 已定义）──
 let mouseDown=false, shootTimer=null;
-const FIRE_RATE=100; // ms 间隔 = 10发/秒
-
-wrap.addEventListener('mousedown',e=>{
-  if(e.button!==0||!GS.running) return;
-  mouseDown=true;
-  doShoot(); // 立即射一发
-  shootTimer=setInterval(doShoot, FIRE_RATE);
-});
-document.addEventListener('mouseup',e=>{
-  if(e.button!==0) return;
-  mouseDown=false;
-  clearInterval(shootTimer); shootTimer=null;
-});
-wrap.addEventListener('mouseleave',()=>{
-  mouseDown=false;
-  clearInterval(shootTimer); shootTimer=null;
-});
-// 阻止右键菜单
-wrap.addEventListener('contextmenu',e=>e.preventDefault());
+const FIRE_RATE=100;
 
 // ── 常量 ──
 const GROUND_RATIO=0.62;
@@ -537,6 +533,24 @@ let GS={
   shotsFired:0, reactionTimes:[],
   timeLeft:60, targets:[], animFrame:null, timer:null, spawnInterval:null, lastFrame:0,
 };
+
+// ── 鼠标事件（在 GS 和 doShoot 定义之后绑定）──
+wrap.addEventListener('mousedown',e=>{
+  if(e.button!==0||!GS.running) return;
+  mouseDown=true;
+  doShoot();
+  shootTimer=setInterval(doShoot, FIRE_RATE);
+});
+document.addEventListener('mouseup',e=>{
+  if(e.button!==0) return;
+  mouseDown=false;
+  clearInterval(shootTimer); shootTimer=null;
+});
+wrap.addEventListener('mouseleave',()=>{
+  mouseDown=false;
+  clearInterval(shootTimer); shootTimer=null;
+});
+wrap.addEventListener('contextmenu',e=>e.preventDefault());
 
 function setMode(m){
   GS.mode=m;

@@ -267,6 +267,14 @@ function resize(){
 resize();
 window.addEventListener('resize', resize);
 
+// ── 后坐力状态（必须在 syncCrosshair 调用之前声明）──
+let recoilY = 0;          // 当前累计后坐力（像素，准星向上偏移）
+let recoilX = 0;          // 水平抖动
+const RECOIL_PER_SHOT = 18;   // 每发上跳像素（提升，持续按住会明显上飘）
+const RECOIL_HORIZ    = 6.0;  // 水平随机抖动幅度
+const RECOIL_RECOVERY = 140;  // 每秒恢复像素（恢复变慢，让后坐力更压迫）
+const RECOIL_MAX      = 200;  // 最大累积（上限大幅提升）
+
 // ── 准星 ──
 let mouseX = 0, mouseY = 0;
 wrap.addEventListener('mousemove', e => {
@@ -284,14 +292,6 @@ function syncCrosshair(){
   requestAnimationFrame(syncCrosshair);
 }
 syncCrosshair();
-
-// ── 后坐力状态 ──
-let recoilY = 0;          // 当前累计后坐力（像素，准星向上偏移）
-let recoilX = 0;          // 水平抖动
-const RECOIL_PER_SHOT = 18;   // 每发上跳像素（提升，持续按住会明显上飘）
-const RECOIL_HORIZ    = 6.0;  // 水平随机抖动幅度
-const RECOIL_RECOVERY = 140;  // 每秒恢复像素（恢复变慢，让后坐力更压迫）
-const RECOIL_MAX      = 200;  // 最大累积（上限大幅提升）
 
 // ── 射击参数 ──
 let mouseDown = false, shootTimer = null;

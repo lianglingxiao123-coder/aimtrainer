@@ -177,20 +177,20 @@
 
 <div id="sens-page" class="page">
   <h2>⚙️ 灵敏度调校</h2>
-  <p class="sub">直接输入三角洲行动游戏内参数，在训练场验证手感后直接用到游戏里</p>
+  <p class="sub">以 CS2 灵敏度为基准，训练场手感与 CS2 完全一致，一键换算其他游戏</p>
   <div class="sens-grid">
     <div class="card">
-      <h3>🖱️ 鼠标 + 三角洲行动设置</h3>
+      <h3>🖱️ 鼠标 + CS2 灵敏度设置</h3>
       <div class="slider-row"><label>鼠标 DPI <span id="dpi-val">800</span></label><input type="range" id="dpi" min="400" max="3200" step="100" value="800" oninput="updateSens()"></div>
       <div class="slider-row">
-        <label>三角洲·灵敏度 <span id="igs-val" style="color:var(--accent);font-weight:700">50</span></label>
-        <input type="range" id="igs" min="1" max="100" step="1" value="50" oninput="updateSens()">
-        <div style="font-size:10px;color:var(--muted);margin-top:2px">对应游戏内"灵敏度"滑条（1–100）</div>
+        <label>CS2 灵敏度 <span id="igs-val" style="color:var(--accent);font-weight:700">2.00</span></label>
+        <input type="range" id="igs" min="0.1" max="5.0" step="0.05" value="2.0" oninput="updateSens()">
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">对应 CS2 游戏内 sensitivity 值（典型范围 0.5–3.0）</div>
       </div>
       <div class="slider-row">
         <label>ADS 倍率 <span id="ads-val">0.80</span></label>
         <input type="range" id="ads" min="0.3" max="1.0" step="0.05" value="0.8" oninput="updateSens()">
-        <div style="font-size:10px;color:var(--muted);margin-top:2px">瞄镜缩放系数（游戏默认 0.8–1.0）</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">瞄镜缩放系数</div>
       </div>
       <div class="slider-row">
         <label>后坐力系数 <span id="recoil-mult-val" style="color:#f59e0b;font-weight:700">1.0</span>×</label>
@@ -199,9 +199,8 @@
       </div>
       <hr style="border-color:var(--border);margin:10px 0">
       <div style="font-size:11px;color:var(--muted);line-height:1.7">
-        三角洲行动 Yaw = <b style="color:var(--accent2)">0.0066°/count</b>（与 CS2 相同）<br>
-        eDPI = DPI × 游戏灵敏度（100制→实际系数）<br>
-        cm/360 = 2.54 × 360 / (DPI × sens_coeff × 0.0066)
+        CS2 yaw = <b style="color:var(--accent2)">0.022°/count</b>（官方值，业界标准）<br>
+        cm/360 = 2.54 × 360 / (DPI × CS2灵敏 × 0.022)
       </div>
     </div>
     <div class="card">
@@ -229,24 +228,32 @@
     <canvas id="sensCanvas"></canvas>
     <p style="font-size:11px;color:var(--muted);text-align:center;margin-top:7px">移动鼠标跟踪靶心 • 蓝点=准星 • 调整灵敏度直到顺手</p>
   </div>
-  <div class="card">
-    <h3>🔄 与其他 FPS 灵敏度互换</h3>
+    <div class="card">
+    <h3>🔄 跨游戏灵敏度换算</h3>
     <p style="font-size:11px;color:var(--muted);margin-bottom:12px">
-      基于相同 cm/360 换算 · 三角洲行动 yaw=0.0066°/count（与CS2相同）
+      基于相同 cm/360 换算 · CS2 yaw=0.022°/count（官方值）
     </p>
     <div class="convert-grid">
+      <div class="ci" style="border:1px solid #3b82f6;background:rgba(59,130,246,.09)">
+        <div class="gn" style="color:#60a5fa">⭐ CS2 / CSGO</div>
+        <div class="sv" id="conv-cs" style="color:#60a5fa">-</div>
+        <div class="su">当前输入值（基准）</div>
+      </div>
       <div class="ci" style="border:1px solid var(--accent);background:rgba(0,212,120,.07)">
-        <div class="gn" style="color:var(--accent)">⭐ 三角洲行动</div>
+        <div class="gn" style="color:var(--accent)">🎮 三角洲行动</div>
         <div class="sv" id="conv-delta" style="color:var(--accent)">-</div>
         <div class="su">游戏内灵敏度（1–100）</div>
       </div>
-      <div class="ci"><div class="gn">CS2 / CSGO</div><div class="sv" id="conv-cs">-</div><div class="su">sensitivity</div></div>
-      <div class="ci"><div class="gn">无畏契约 Valorant</div><div class="sv" id="conv-val">-</div><div class="su">sensitivity</div></div>
+      <div class="ci">
+        <div class="gn">🔫 无畏契约 Valorant</div>
+        <div class="sv" id="conv-val">-</div>
+        <div class="su">sensitivity</div>
+      </div>
     </div>
-    <div style="margin-top:12px;padding:10px 14px;background:rgba(0,212,120,.06);border-radius:6px;border-left:3px solid var(--accent)">
+    <div style="margin-top:12px;padding:10px 14px;background:rgba(59,130,246,.06);border-radius:6px;border-left:3px solid #3b82f6">
       <div style="font-size:11px;color:var(--muted);line-height:1.8">
-        📌 <b style="color:var(--text)">在训练营找到最舒适的灵敏度后，直接把左上角的"三角洲·灵敏度"值填到游戏里即可</b><br>
-        &nbsp;&nbsp;&nbsp;&nbsp;冲刺模式建议目标：<b style="color:var(--accent2)">cm/360 在 15–30cm 之间</b>（反应快、不过飘）
+        📌 <b style="color:var(--text)">训练场手感 = CS2 实际手感</b> — 调到顺手后把对应游戏的换算值填进去即可<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;冲刺模式建议：<b style="color:var(--accent2)">cm/360 在 20–35cm 之间</b>（反应快、不过飘）
       </div>
     </div>
   </div>
@@ -1128,36 +1135,40 @@ function initSensCanvas(){
 }
 
 function updateSens(){
-  const dpi = +document.getElementById('dpi').value;
-  const igs = +document.getElementById('igs').value;   // 三角洲 1–100
-  const ads = +document.getElementById('ads').value;
-  document.getElementById('dpi-val').textContent = dpi;
-  document.getElementById('igs-val').textContent = igs;
-  document.getElementById('ads-val').textContent = ads.toFixed(2);
+  const dpi  = +document.getElementById('dpi').value;
+  const cs2s = +document.getElementById('igs').value;   // CS2 sensitivity
+  const ads  = +document.getElementById('ads').value;
+  document.getElementById('dpi-val').textContent  = dpi;
+  document.getElementById('igs-val').textContent  = cs2s.toFixed(2);
+  document.getElementById('ads-val').textContent  = ads.toFixed(2);
 
-  // 三角洲行动灵敏度公式（基于 yaw = 0.0066°/count，社区实测）
-  // 校准基准：DPI=800, 游戏灵敏=50 → cm/360 ≈ 25cm
-  const DELTA_YAW  = 0.0066;
-  const K_DELTA    = 0.13855;
-  const sens_coeff = igs * K_DELTA;
-  const cm360      = 2.54 * 360 / (dpi * sens_coeff * DELTA_YAW);
-  const cm360_ads  = cm360 / ads;
+  // CS2 官方 yaw = 0.022°/count（业界标准，CSGO/CS2 一致）
+  // cm/360 = 2.54 × 360 / (DPI × sens × 0.022)
+  const CS2_YAW = 0.022;
+  const cm360     = 2.54 * 360 / (dpi * cs2s * CS2_YAW);
+  const cm360_ads = cm360 / ads;
 
   document.getElementById('cm360').textContent     = cm360.toFixed(1);
   document.getElementById('cm360-ads').textContent = cm360_ads.toFixed(1);
 
-  // ── 固定比例换算（用户指定比例）──
-  // 三角洲行动 : CS2 : Valorant = 2.12 : 0.636 : 0.2
-  // 换算公式：目标灵敏 = 三角洲灵敏 × (目标比例 / 三角洲比例)
-  const RATIO_DELTA = 2.12;
-  const RATIO_CS2   = 0.636;
-  const RATIO_VAL   = 0.2;
+  // ── CS2 本身（基准，直接显示输入值）──
+  document.getElementById('conv-cs').textContent = cs2s.toFixed(2);
 
-  document.getElementById('conv-delta').textContent = igs;
-  document.getElementById('conv-cs').textContent    = (igs * RATIO_CS2 / RATIO_DELTA).toFixed(3);
-  document.getElementById('conv-val').textContent   = (igs * RATIO_VAL / RATIO_DELTA).toFixed(3);
+  // ── 三角洲行动：yaw=0.0066°/count（与CS2相同），灵敏度为1–100线性映射 ──
+  // 三角洲 sens_coeff = igs * K_DELTA，其中 K_DELTA = 0.13855
+  // cm360 = 2.54 * 360 / (dpi * igs * 0.13855 * 0.0066)
+  // 反推：igs = 2.54 * 360 / (dpi * K_DELTA * 0.0066 * cm360)
+  const K_DELTA   = 0.13855;
+  const DELTA_YAW = 0.0066;
+  const delta_igs = 2.54 * 360 / (dpi * K_DELTA * DELTA_YAW * cm360);
+  document.getElementById('conv-delta').textContent = Math.min(100, Math.max(1, delta_igs)).toFixed(1);
 
-  // 同步训练场灵敏度
+  // ── 无畏契约 Valorant：yaw = 0.07°/count ──
+  // val_sens = 2.54 * 360 / (dpi * 0.07 * cm360)
+  const val_sens = 2.54 * 360 / (dpi * 0.07 * cm360);
+  document.getElementById('conv-val').textContent = val_sens.toFixed(3);
+
+  // 同步训练场灵敏度（cm/360 驱动 Pointer Lock 相对位移）
   updateTrainSens(cm360);
 }
 

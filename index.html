@@ -159,6 +159,7 @@
         <span>👁️ 探头 — 掩体闪现</span>
         <span>🎯 多目标 — 快速切换</span>
       </div>
+      <p style="font-size:12px;color:#64b5f6;margin-top:4px;">🖱️ 开始后自动锁定鼠标（相对位移模式）· 灵敏度与三角洲游戏内同步 · ESC 退出锁定</p>
       <button class="big-start" onclick="toggleGame()">▶ 开始训练</button>
     </div>
     <div id="result-modal">
@@ -345,10 +346,46 @@ const RANDOM_SPREAD   = 2.5; // 每发额外随机散布（像素）
 
 // ── 准星 ──
 let mouseX = 0, mouseY = 0;
+let isPointerLocked = false;
+
+// 点击训练区域时请求 Pointer Lock（相对位移模式）
+wrap.addEventListener('click', () => {
+  if (!isPointerLocked) wrap.requestPointerLock();
+});
+document.addEventListener('pointerlockchange', () => {
+  isPointerLocked = (document.pointerLockElement === wrap);
+  // 解锁时将准星还原到中心
+  if (!isPointerLocked) {
+    mouseX = W / 2;
+    mouseY = H / 2;
+  }
+});
+
+// 灵敏度缩放：基于 cm/360 将真实物理位移映射到屏幕像素
+// 屏幕 DPI ≈ 96 px/inch，对应显示器尺寸下 360° = cm360 * 96/2.54 px
+// 每帧相对移动 movementX px（以 96 dpi 鼠标计）→ 乘以 sensScale 得画面偏移
+function getSensScale() {
+  // 标准屏：96px/inch = 37.8px/cm
+  // 转一圈(360°)对应 trainSensCm360 cm → trainSensCm360 * 37.8 px
+  // 当鼠标移动 movementX px 时，画面旋转角 = movementX / (cm360_px) * 360
+  // 这里简化为：画面偏移 = movementX * (W / cm360_px)
+  // 校准基准：cm360=25cm, W=800px → 转一圈=25*37.8=945px → scale=800/945≈0.847
+  const cm360_px = trainSensCm360 * 37.8; // 转一圈需要移动的鼠标像素
+  return W / cm360_px;
+}
+
 wrap.addEventListener('mousemove', e => {
-  const r = wrap.getBoundingClientRect();
-  mouseX = e.clientX - r.left;
-  mouseY = e.clientY - r.top;
+  if (isPointerLocked) {
+    // Pointer Lock 模式：使用相对位移 + 灵敏度缩放
+    const scale = getSensScale();
+    mouseX = Math.max(0, Math.min(W, mouseX + e.movementX * scale));
+    mouseY = Math.max(0, Math.min(H, mouseY + e.movementY * scale));
+  } else {
+    // 未锁定时（训练未开始）用绝对坐标
+    const r = wrap.getBoundingClientRect();
+    mouseX = e.clientX - r.left;
+    mouseY = e.clientY - r.top;
+  }
   crosshairEl.style.left = mouseX + 'px';
   // top 由 syncCrosshair() 统一更新（含后坐力偏移）
 });
@@ -798,8 +835,15 @@ let GS = {
 };
 
 // ── 鼠标事件（在 GS 声明后绑定）──
+// click 用于请求 Pointer Lock（游戏未开始时）
+wrap.addEventListener('click', () => {
+  if (!GS.running && !isPointerLocked) wrap.requestPointerLock();
+});
 wrap.addEventListener('mousedown', e => {
-  if(e.button !== 0 || !GS.running) return;
+  if(e.button !== 0) return;
+  // 游戏运行中但未锁定：先锁定鼠标
+  if(GS.running && !isPointerLocked){ wrap.requestPointerLock(); return; }
+  if(!GS.running) return;
   mouseDown = true;
   doShoot();
   shootTimer = setInterval(doShoot, FIRE_RATE);
@@ -827,6 +871,10 @@ function startGame(){
   document.getElementById('start-overlay').style.display = 'none';
   document.getElementById('result-modal').classList.remove('show');
   recoilY = 0; recoilX = 0; recoilTargetY = 0; recoilTargetX = 0; shotIndex = 0; if(resetTimer){ clearTimeout(resetTimer); resetTimer = null; }
+  // 初始化准星到中心
+  mouseX = W / 2; mouseY = H / 2;
+  // 请求 Pointer Lock 以启用相对位移灵敏度
+  wrap.requestPointerLock();
   Object.assign(GS, {
     running:true, kills:0, hits:0, misses:0, headshots:0,
     combo:0, maxCombo:0, shotsFired:0, reactionTimes:[],
@@ -973,6 +1021,8 @@ function stopGame(showResult=true){
   clearInterval(shootTimer); mouseDown = false;
   cancelAnimationFrame(GS.animFrame);
   ctx.clearRect(0, 0, W, H);
+  // 退出 Pointer Lock
+  if (document.pointerLockElement === wrap) document.exitPointerLock();
   const btn = document.getElementById('startBtn');
   btn.textContent = '开始训练'; btn.classList.remove('stop');
   document.getElementById('hud-time').textContent = '60s';

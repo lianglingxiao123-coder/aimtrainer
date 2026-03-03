@@ -1154,19 +1154,13 @@ function updateSens(){
   // ── CS2 本身（基准，直接显示输入值）──
   document.getElementById('conv-cs').textContent = cs2s.toFixed(2);
 
-  // ── 三角洲行动：yaw=0.0066°/count（与CS2相同），灵敏度为1–100线性映射 ──
-  // 三角洲 sens_coeff = igs * K_DELTA，其中 K_DELTA = 0.13855
-  // cm360 = 2.54 * 360 / (dpi * igs * 0.13855 * 0.0066)
-  // 反推：igs = 2.54 * 360 / (dpi * K_DELTA * 0.0066 * cm360)
-  const K_DELTA   = 0.13855;
-  const DELTA_YAW = 0.0066;
-  const delta_igs = 2.54 * 360 / (dpi * K_DELTA * DELTA_YAW * cm360);
-  document.getElementById('conv-delta').textContent = Math.min(100, Math.max(1, delta_igs)).toFixed(1);
-
-  // ── 无畏契约 Valorant：yaw = 0.07°/count ──
-  // val_sens = 2.54 * 360 / (dpi * 0.07 * cm360)
-  const val_sens = 2.54 * 360 / (dpi * 0.07 * cm360);
-  document.getElementById('conv-val').textContent = val_sens.toFixed(3);
+  // ── 校准比例（实测基准：CS2=1.0 时，三角洲=3.3333，Valorant=0.314）──
+  const RATIO_DELTA = 3.333333333333;
+  const RATIO_VAL   = 0.314;
+  const delta_igs = cs2s * RATIO_DELTA;
+  const val_sens  = cs2s * RATIO_VAL;
+  document.getElementById('conv-delta').textContent = Math.min(100, Math.max(0.1, delta_igs)).toFixed(2);
+  document.getElementById('conv-val').textContent   = val_sens.toFixed(3);
 
   // 同步训练场灵敏度（cm/360 驱动 Pointer Lock 相对位移）
   updateTrainSens(cm360);

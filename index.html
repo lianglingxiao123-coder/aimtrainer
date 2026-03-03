@@ -192,6 +192,11 @@
         <input type="range" id="ads" min="0.3" max="1.0" step="0.05" value="0.8" oninput="updateSens()">
         <div style="font-size:10px;color:var(--muted);margin-top:2px">瞄镜缩放系数（游戏默认 0.8–1.0）</div>
       </div>
+      <div class="slider-row">
+        <label>后坐力系数 <span id="recoil-mult-val" style="color:#f59e0b;font-weight:700">1.0</span>×</label>
+        <input type="range" id="recoil-mult" min="0" max="3.0" step="0.1" value="1.0" oninput="updateRecoilMult()">
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">0 = 无后坐力 · 1 = 正常 · 3 = 地狱难度</div>
+      </div>
       <hr style="border-color:var(--border);margin:10px 0">
       <div style="font-size:11px;color:var(--muted);line-height:1.7">
         三角洲行动 Yaw = <b style="color:var(--accent2)">0.0066°/count</b>（与 CS2 相同）<br>
@@ -233,13 +238,10 @@
       <div class="ci" style="border:1px solid var(--accent);background:rgba(0,212,120,.07)">
         <div class="gn" style="color:var(--accent)">⭐ 三角洲行动</div>
         <div class="sv" id="conv-delta" style="color:var(--accent)">-</div>
-        <div class="su">当前设置值</div>
+        <div class="su">游戏内灵敏度（1–100）</div>
       </div>
-      <div class="ci"><div class="gn">CSGO / CS2</div><div class="sv" id="conv-cs">-</div><div class="su">sensitivity</div></div>
-      <div class="ci"><div class="gn">Valorant</div><div class="sv" id="conv-val">-</div><div class="su">sensitivity</div></div>
-      <div class="ci"><div class="gn">和平精英 / PUBG</div><div class="sv" id="conv-pubg">-</div><div class="su">灵敏度（1–100）</div></div>
-      <div class="ci"><div class="gn">Apex Legends</div><div class="sv" id="conv-apex">-</div><div class="su">sensitivity</div></div>
-      <div class="ci"><div class="gn">Overwatch 2</div><div class="sv" id="conv-ow">-</div><div class="su">sensitivity</div></div>
+      <div class="ci"><div class="gn">CS2 / CSGO</div><div class="sv" id="conv-cs">-</div><div class="su">sensitivity</div></div>
+      <div class="ci"><div class="gn">无畏契约 Valorant</div><div class="sv" id="conv-val">-</div><div class="su">sensitivity</div></div>
     </div>
     <div style="margin-top:12px;padding:10px 14px;background:rgba(0,212,120,.06);border-radius:6px;border-left:3px solid var(--accent)">
       <div style="font-size:11px;color:var(--muted);line-height:1.8">
@@ -941,12 +943,12 @@ function drawCover(){
 function doShoot(){
   if(!GS.running) return;
 
-  // Spray Pattern 后坐力：按弹数索引取预定义偏移
+  // Spray Pattern 后坐力：按弹数索引取预定义偏移，乘以后坐力系数
   const pidx = Math.min(shotIndex, SPRAY_PATTERN.length - 1);
   const [px, py] = SPRAY_PATTERN[pidx];
-  // 加入少量随机散布（模拟真实枪械）
-  recoilTargetX = px + (Math.random() - 0.5) * 2 * RANDOM_SPREAD;
-  recoilTargetY = py + (Math.random() - 0.5) * RANDOM_SPREAD * 0.5;
+  // 加入少量随机散布（模拟真实枪械），同样受后坐力系数影响
+  recoilTargetX = (px + (Math.random() - 0.5) * 2 * RANDOM_SPREAD) * recoilMultiplier;
+  recoilTargetY = (py + (Math.random() - 0.5) * RANDOM_SPREAD * 0.5) * recoilMultiplier;
   shotIndex++;
 
   // 松手重置计时器：每次射击重启
@@ -1134,10 +1136,9 @@ function updateSens(){
   document.getElementById('ads-val').textContent = ads.toFixed(2);
 
   // 三角洲行动灵敏度公式（基于 yaw = 0.0066°/count，社区实测）
-  // 校准基准：DPI=800, 游戏灵敏=50 → cm/360 ≈ 25cm（中敏玩家标准）
-  // sens_coeff = igs * 0.13855（线性映射，灵敏度100 → 13.855，50 → 6.93）
-  const DELTA_YAW  = 0.0066;          // 三角洲行动 yaw 值（°/count）
-  const K_DELTA    = 0.13855;         // 校准系数（800DPI+50灵敏=25cm/360）
+  // 校准基准：DPI=800, 游戏灵敏=50 → cm/360 ≈ 25cm
+  const DELTA_YAW  = 0.0066;
+  const K_DELTA    = 0.13855;
   const sens_coeff = igs * K_DELTA;
   const cm360      = 2.54 * 360 / (dpi * sens_coeff * DELTA_YAW);
   const cm360_ads  = cm360 / ads;
@@ -1145,28 +1146,18 @@ function updateSens(){
   document.getElementById('cm360').textContent     = cm360.toFixed(1);
   document.getElementById('cm360-ads').textContent = cm360_ads.toFixed(1);
 
-  // 三角洲本身：就是当前 igs 值
+  // ── 固定比例换算（用户指定比例）──
+  // 三角洲行动 : CS2 : Valorant = 2.12 : 0.636 : 0.2
+  // 换算公式：目标灵敏 = 三角洲灵敏 × (目标比例 / 三角洲比例)
+  const RATIO_DELTA = 2.12;
+  const RATIO_CS2   = 0.636;
+  const RATIO_VAL   = 0.2;
+
   document.getElementById('conv-delta').textContent = igs;
+  document.getElementById('conv-cs').textContent    = (igs * RATIO_CS2 / RATIO_DELTA).toFixed(3);
+  document.getElementById('conv-val').textContent   = (igs * RATIO_VAL / RATIO_DELTA).toFixed(3);
 
-  // 以下均基于相同 cm/360 反向推算（最准确的跨游戏换算方式）
-  // CS2/CSGO yaw = 0.022°/count → cs_s = 2.54*360 / (dpi * 0.022 * cm360)
-  const cs_sens = 2.54 * 360 / (dpi * 0.022 * cm360);
-  document.getElementById('conv-cs').textContent   = cs_sens.toFixed(3);
-
-  // Valorant yaw = 0.07°/count
-  document.getElementById('conv-val').textContent  = (2.54*360 / (dpi * 0.07 * cm360)).toFixed(3);
-
-  // 和平精英 PC：yaw ≈ 0.04464°/count（sens100=100%时≈0.04464）
-  const pubg_s = 2.54*360 / (dpi * 0.04464 * cm360);
-  document.getElementById('conv-pubg').textContent = Math.round(Math.min(pubg_s * 100, 100));
-
-  // Apex Legends yaw = 0.022°/count（同CS2）
-  document.getElementById('conv-apex').textContent = cs_sens.toFixed(3);
-
-  // Overwatch 2 yaw = 0.0066°/count，灵敏度单位×10 → ow_s = delta_s * K_DELTA/1 = igs（近似）
-  document.getElementById('conv-ow').textContent   = (2.54*360 / (dpi * 0.0066 * cm360) / 10).toFixed(1);
-
-  // 同步训练场灵敏度（更新 mouseSensMultiplier 让测试场手感一致）
+  // 同步训练场灵敏度
   updateTrainSens(cm360);
 }
 
@@ -1174,6 +1165,13 @@ function updateSens(){
 let trainSensCm360 = 30; // 初始默认
 function updateTrainSens(cm360){
   trainSensCm360 = cm360;
+}
+
+// 后坐力系数（由滑条控制）
+let recoilMultiplier = 1.0;
+function updateRecoilMult(){
+  recoilMultiplier = +document.getElementById('recoil-mult').value;
+  document.getElementById('recoil-mult-val').textContent = recoilMultiplier.toFixed(1);
 }
 
 // ── 统计 ──

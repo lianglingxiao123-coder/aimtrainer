@@ -135,7 +135,6 @@
     <div class="hud-sep"></div>
     <div class="mode-selector">
       <button class="mode-btn active" id="btn-sprint" onclick="setMode('sprint')">冲刺</button>
-      <button class="mode-btn" id="btn-peek" onclick="setMode('peek')">探头</button>
       <button class="mode-btn" id="btn-multi" onclick="setMode('multi')">多目标</button>
     </div>
     <button class="start-btn" id="startBtn" onclick="toggleGame()">开始训练</button>
@@ -151,12 +150,10 @@
     </svg>
     <div id="start-overlay">
       <h2>🎯 三角洲练枪训练营</h2>
-      <p>真实人形 · 随机出现 · 折返闪避 · 2秒自动消失</p>
+      <p style="font-size:13px;color:var(--muted)">真实人形 · 随机出现 · 折返闪避 · 2秒自动消失</p>
       <p style="font-size:12px;color:#475569">爆头 -50血 · 身体 -25血 · 四肢 -12血 · 持续射击有后坐力</p>
       <div style="display:flex;gap:22px;margin-top:6px;font-size:12px;color:var(--muted)">
-        <span>🪖 巡逻 — 慢速横移</span>
         <span>💨 冲刺 — 高速奔跑</span>
-        <span>👁️ 探头 — 掩体闪现</span>
         <span>🎯 多目标 — 快速切换</span>
       </div>
       <p style="font-size:12px;color:#64b5f6;margin-top:4px;">🖱️ 开始后自动锁定鼠标（相对位移模式）· 灵敏度与三角洲游戏内同步 · ESC 退出锁定</p>
@@ -307,6 +304,149 @@ const fengyiImg = new Image();
 fengyiImg.src = FENGYI_B64;
 let fengyiReady = false;
 fengyiImg.onload = () => { fengyiReady = true; };
+
+// ── 蜂医骨骼部件定义（基于260×504实际像素）──
+// sx/sy/sw/sh：从sprite裁切区域；px/py：部件内枢轴点（连接父骨骼处）
+const FENGYI_PARTS = {
+  head:        { sx: 74,  sy:  13, sw: 114, sh:  77, px: 57, py: 67 }, // 枢轴=下颌/颈部
+  torso:       { sx: 47,  sy:  84, sw: 168, sh: 168, px: 84, py:  3 }, // 枢轴=肩顶
+  upper_arm_r: { sx:188,  sy:  87, sw:  47, sh:  97, px: 13, py:  7 }, // 枢轴=肩
+  lower_arm_r: { sx:191,  sy: 181, sw:  40, sh:  67, px:  7, py:  3 }, // 枢轴=肘
+  upper_arm_l: { sx: 27,  sy:  87, sw:  47, sh:  97, px: 34, py:  7 }, // 枢轴=肩
+  lower_arm_l: { sx: 23,  sy: 181, sw:  47, sh:  67, px: 40, py:  3 }, // 枢轴=肘
+  thigh_r:     { sx: 80,  sy: 245, sw:  67, sh:  97, px: 27, py:  3 }, // 枢轴=髋
+  shin_r:      { sx: 84,  sy: 334, sw:  57, sh:  97, px: 20, py:  3 }, // 枢轴=膝
+  thigh_l:     { sx:117,  sy: 245, sw:  67, sh:  97, px: 37, py:  3 }, // 枢轴=髋
+  shin_l:      { sx:121,  sy: 334, sw:  57, sh:  97, px: 23, py:  3 }, // 枢轴=膝
+};
+
+// ── 蜂医骨骼渲染：骨架中各关节在sprite坐标系下的位置（260px宽）──
+// 脊柱：肩顶(131,87)，髋(131,251)；腿：膝右≈(114,342)，膝左≈(148,342)
+// 手臂：肩右≈(201,94)，肩左≈(61,94)；肘右≈(201,181)，肘左≈(63,181)
+const FENGYI_JOINTS_SPRITE = {
+  shoulder_top: { x: 131, y:  87 }, // 肩连torso枢轴
+  neck_base:    { x: 131, y:  87 }, // 颈底（同肩顶）
+  head_attach:  { x: 131, y:  90 }, // head枢轴在全局的位置（torso.y + head.py offset）
+  shoulder_r:   { x: 201, y:  94 },
+  elbow_r:      { x: 201, y: 181 },
+  shoulder_l:   { x:  61, y:  94 },
+  elbow_l:      { x:  63, y: 181 },
+  hip:          { x: 131, y: 251 },
+  knee_r:       { x: 114, y: 342 },
+  knee_l:       { x: 148, y: 342 },
+};
+
+/**
+ * 绘制蜂医骨骼部件（在已应用镜像变换的ctx中调用）
+ * wx/wy: 枢轴世界坐标; angle: 绕枢轴旋转弧度; rs: 渲染缩放
+ */
+function drawPart(ctx, part, wx, wy, angle, rs) {
+  const { sx, sy, sw, sh, px, py } = part;
+  ctx.save();
+  ctx.translate(wx, wy);
+  ctx.rotate(angle);
+  ctx.drawImage(fengyiImg, sx, sy, sw, sh, -px * rs, -py * rs, sw * rs, sh * rs);
+  ctx.restore();
+}
+
+/**
+ * 蜂医骨骼帧渲染 — 整体翻转策略：dir<0时在x处镜像整个角色
+ * @param ctx        CanvasRenderingContext2D
+ * @param x          角色中心X（canvas像素）
+ * @param footY      脚底Y（canvas像素）
+ * @param totalH     角色总高 = foot - headTop（canvas像素）
+ * @param dir        朝向，+1=右，-1=左
+ * @param walkPhase  行走相位（弧度）
+ * @param alpha      透明度[0,1]
+ * @param tintColor  如非null则叠加色块（dying/受伤）
+ */
+function drawFengyiSkeletal(ctx, x, footY, totalH, dir, walkPhase, alpha, tintColor) {
+  // sprite 有效高度：head_top y=13 到 shin_bottom y=431，共 418px
+  const SPRITE_H = 418; // 431 - 13
+  const rs = totalH / SPRITE_H;
+
+  // spriteOriginY：canvas 坐标中，对应 sprite y=0 的位置
+  // foot 对应 sprite y=431，所以 spriteOriginY = footY - 431*rs
+  const spriteOriginY = footY - 431 * rs;
+  // spriteOriginX：sprite x=0 对应 canvas 中 x - 131*rs（角色中心在 sprite x=131）
+  const spriteOriginX = x - 131 * rs;
+
+  // 关节在 canvas 中的静止位置（rest pose）
+  function jx(n) { return spriteOriginX + FENGYI_JOINTS_SPRITE[n].x * rs; }
+  function jy(n) { return spriteOriginY + FENGYI_JOINTS_SPRITE[n].y * rs; }
+
+  // 走路动画角度（角度轴：向前=正方向= dir>0时往右）
+  // swing>0 → 前腿前摆，后腿后摆
+  const swing    = Math.sin(walkPhase) * 0.26;   // ±~15°
+  const shinBend = Math.max(0, Math.sin(walkPhase)) * 0.20; // 前腿小腿回收
+
+  // 大腿末端（膝盖）：由髋关节 + 旋转后的大腿向量计算
+  // 大腿部件高度（枢轴到底端）= sh - py（sprite像素）
+  const thighLen_r = (FENGYI_PARTS.thigh_r.sh - FENGYI_PARTS.thigh_r.py) * rs;
+  const thighLen_l = (FENGYI_PARTS.thigh_l.sh - FENGYI_PARTS.thigh_l.py) * rs;
+  const upperArmLen_r = (FENGYI_PARTS.upper_arm_r.sh - FENGYI_PARTS.upper_arm_r.py) * rs;
+  const upperArmLen_l = (FENGYI_PARTS.upper_arm_l.sh - FENGYI_PARTS.upper_arm_l.py) * rs;
+
+  // 整体镜像：dir<0时在 x 轴处 scale(-1,1)，使 sprite（朝右设计）看向左
+  ctx.save();
+  if (dir < 0) {
+    ctx.translate(x, 0);
+    ctx.scale(-1, 1);
+    ctx.translate(-x, 0);
+  }
+
+  // ── 后腿（thigh_r / shin_r，在 sprite 右侧，镜像后视觉在左=后）──
+  ctx.globalAlpha = alpha * 0.68;
+  const thighAng_r = -swing; // 后腿反向
+  const kneeR_x = jx('hip') + Math.sin(thighAng_r) * thighLen_r;
+  const kneeR_y = jy('hip') + Math.cos(thighAng_r) * thighLen_r;
+  drawPart(ctx, FENGYI_PARTS.thigh_r, jx('hip'), jy('hip'), thighAng_r, rs);
+  const shinAng_r = thighAng_r + Math.max(0, -swing) * 0.5;
+  drawPart(ctx, FENGYI_PARTS.shin_r, kneeR_x, kneeR_y, shinAng_r, rs);
+
+  // ── 后臂（upper_arm_r / lower_arm_r）──
+  const armAng_r = -swing * 0.7;
+  const elbowR_x = jx('shoulder_r') + Math.sin(armAng_r) * upperArmLen_r;
+  const elbowR_y = jy('shoulder_r') + Math.cos(armAng_r) * upperArmLen_r;
+  drawPart(ctx, FENGYI_PARTS.upper_arm_r, jx('shoulder_r'), jy('shoulder_r'), armAng_r, rs);
+  drawPart(ctx, FENGYI_PARTS.lower_arm_r, elbowR_x, elbowR_y, armAng_r * 1.1, rs);
+
+  // ── 躯干 ──
+  ctx.globalAlpha = alpha;
+  drawPart(ctx, FENGYI_PARTS.torso, jx('shoulder_top'), jy('shoulder_top'), 0, rs);
+
+  // ── 头部（枢轴=下颌，放在颈底）──
+  // 头部 py=67 表示下颌在 head crop 内的位置，下颌对应 sprite y=13+67=80
+  // 颈底（肩顶）在 sprite y=87，所以下颌落在 87 上方 7px
+  const neckBaseY = jy('shoulder_top') - 7 * rs;
+  drawPart(ctx, FENGYI_PARTS.head, jx('shoulder_top'), neckBaseY, 0, rs);
+
+  // ── 前腿（thigh_l / shin_l）──
+  ctx.globalAlpha = alpha;
+  const thighAng_l = swing; // 前腿正向
+  const kneeL_x = jx('hip') + Math.sin(thighAng_l) * thighLen_l;
+  const kneeL_y = jy('hip') + Math.cos(thighAng_l) * thighLen_l;
+  drawPart(ctx, FENGYI_PARTS.thigh_l, jx('hip'), jy('hip'), thighAng_l, rs);
+  const shinAng_l = thighAng_l - shinBend;
+  drawPart(ctx, FENGYI_PARTS.shin_l, kneeL_x, kneeL_y, shinAng_l, rs);
+
+  // ── 前臂（upper_arm_l / lower_arm_l）──
+  const armAng_l = swing * 0.7;
+  const elbowL_x = jx('shoulder_l') + Math.sin(armAng_l) * upperArmLen_l;
+  const elbowL_y = jy('shoulder_l') + Math.cos(armAng_l) * upperArmLen_l;
+  drawPart(ctx, FENGYI_PARTS.upper_arm_l, jx('shoulder_l'), jy('shoulder_l'), armAng_l, rs);
+  drawPart(ctx, FENGYI_PARTS.lower_arm_l, elbowL_x, elbowL_y, armAng_l * 1.1, rs);
+
+  ctx.restore(); // 恢复镜像变换
+
+  // tint 叠加（dying / lowHealth flash）
+  if (tintColor) {
+    ctx.globalAlpha = alpha * 0.45;
+    ctx.fillStyle = tintColor;
+    ctx.fillRect(spriteOriginX, spriteOriginY + 13 * rs, 260 * rs, SPRITE_H * rs);
+  }
+  ctx.globalAlpha = alpha;
+}
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -659,7 +799,8 @@ class Target {
 
     const walkSwing = Math.sin(this.walkPhase) * (this.jumping ? 0 : (this.mode==='sprint' ? 14 : 9));
 
-    // ── 腿（前后腿，两段：大腿+小腿）──
+    // ── 腿（前后腿，两段：大腿+小腿）── 仅在矢量fallback时使用；骨骼模式由 drawFengyiSkeletal 全权处理
+    if(!fengyiReady){
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
 
     // 后腿（稍暗）
@@ -685,26 +826,20 @@ class Target {
     ctx.beginPath(); ctx.moveTo(x + lLegOffX + walkSwing*s, kneeY); ctx.lineTo(x + lLegOffX + walkSwing*s*0.5, foot); ctx.stroke();
     ctx.strokeStyle = bootsC; ctx.lineWidth = this.legW * 0.9;
     ctx.beginPath(); ctx.moveTo(x + lLegOffX + walkSwing*s*0.5, foot); ctx.lineTo(x + lLegOffX + walkSwing*s*0.5 + gd*3*s, foot - this.legH*0.07); ctx.stroke();
+    } // end if(!fengyiReady) vector legs
 
-    // ── 躯干+头部：蜂医立绘贴图 ──
+    // ── 躯干+头部+手臂：蜂医骨骼立绘 / 矢量 fallback ──
     const sw = this.shoulderW, ww = this.waistW;
-    const imgH = this.headR * 2 + this.neckH + this.torsoH; // 从头顶到腰
-    const imgW = imgH * 0.5; // 宽:高 ≈ 1:2
+    const imgH = this.headR * 2 + this.neckH + this.torsoH;
+    const imgW = imgH * 0.5;
     const imgTop  = headCY - this.headR * 1.1;
-    const imgLeft = x - imgW / 2;
 
-    if(fengyiReady && !tintColor){
-      // 根据朝向flip（dir>0朝右，dir<0朝左）
-      ctx.save();
-      ctx.translate(x, imgTop + imgH/2);
-      if(gd < 0) ctx.scale(-1, 1);
-      ctx.drawImage(fengyiImg,
-        0, 0, 200, 280,           // 源：立绘上半身（200px宽，取前280/400高）
-        -imgW/2, -imgH/2, imgW, imgH
-      );
-      ctx.restore();
+    if(fengyiReady){
+      // ── 骨骼渲染（sprite sheet 逐部件拼接）──
+      const totalH = foot - (headCY - this.headR);
+      drawFengyiSkeletal(ctx, x, foot, totalH, gd, this.walkPhase, alpha, tintColor);
     } else {
-      // fallback: 原始矢量躯干
+      // ── fallback: 矢量躯干+头部+手臂 ──
       ctx.fillStyle = torsoC; ctx.strokeStyle = tintColor ? tintColor : '#1e3a1e'; ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(x - sw/2, shoulderY);
@@ -712,10 +847,8 @@ class Target {
       ctx.lineTo(x + ww/2, hipY);
       ctx.lineTo(x - ww/2, hipY);
       ctx.closePath(); ctx.fill(); ctx.stroke();
-    }
 
-    // ── 武器 ──
-    if(!fengyiReady || tintColor){
+      // 武器
       ctx.fillStyle = tintColor ? tintColor : '#1a1a1a';
       ctx.save();
       ctx.translate(x + gd * sw * 0.52, shoulderY + this.torsoH * 0.3);
@@ -724,33 +857,28 @@ class Target {
       ctx.fillRect(gd > 0 ? 0 : -gunL, -gunH/2, gunL, gunH);
       ctx.fillRect(gd > 0 ? -gunH : -gunH, -gunH*1.3, gunH*1.2, gunH*2);
       ctx.restore();
-    }
 
-    // ── 手臂（后臂偏暗）──
-    if(!fengyiReady || tintColor){
-      // ── 手臂（后臂偏暗）──
+      // 手臂（后臂偏暗）
       const armY1 = shoulderY + 2*s;
       const elbowOff = this.headR * 2.0;
       const wristOff = this.headR * 1.8;
-      const armSwing = -Math.sin(this.walkPhase) * 6;
-      // 后臂
+      const armSwingVec = -Math.sin(this.walkPhase) * 6;
       ctx.globalAlpha = alpha * 0.72;
       ctx.strokeStyle = torsoC; ctx.lineWidth = this.armW;
-      ctx.beginPath(); ctx.moveTo(x + sw/2, armY1); ctx.lineTo(x + gd*elbowOff*0.5, armY1 + elbowOff + armSwing*s); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x + sw/2, armY1); ctx.lineTo(x + gd*elbowOff*0.5, armY1 + elbowOff + armSwingVec*s); ctx.stroke();
       ctx.strokeStyle = skinC;
-      ctx.beginPath(); ctx.moveTo(x + gd*elbowOff*0.5, armY1 + elbowOff + armSwing*s); ctx.lineTo(x + gd*elbowOff*0.9, armY1 + elbowOff + wristOff*0.7 + armSwing*s); ctx.stroke();
-      // 前臂
+      ctx.beginPath(); ctx.moveTo(x + gd*elbowOff*0.5, armY1 + elbowOff + armSwingVec*s); ctx.lineTo(x + gd*elbowOff*0.9, armY1 + elbowOff + wristOff*0.7 + armSwingVec*s); ctx.stroke();
       ctx.globalAlpha = alpha;
       ctx.strokeStyle = torsoC; ctx.lineWidth = this.armW;
-      ctx.beginPath(); ctx.moveTo(x - sw/2, armY1); ctx.lineTo(x - gd*elbowOff*0.4, armY1 + elbowOff - armSwing*s); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x - sw/2, armY1); ctx.lineTo(x - gd*elbowOff*0.4, armY1 + elbowOff - armSwingVec*s); ctx.stroke();
       ctx.strokeStyle = skinC;
-      ctx.beginPath(); ctx.moveTo(x - gd*elbowOff*0.4, armY1 + elbowOff - armSwing*s); ctx.lineTo(x - gd*elbowOff*0.1, armY1 + elbowOff + wristOff*0.55 - armSwing*s); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x - gd*elbowOff*0.4, armY1 + elbowOff - armSwingVec*s); ctx.lineTo(x - gd*elbowOff*0.1, armY1 + elbowOff + wristOff*0.55 - armSwingVec*s); ctx.stroke();
 
-      // ── 脖子（短）──
+      // 脖子
       ctx.strokeStyle = skinC; ctx.lineWidth = this.headR * 0.55; ctx.lineCap = 'round';
       ctx.beginPath(); ctx.moveTo(x, shoulderY); ctx.lineTo(x, headCY + this.headR); ctx.stroke();
 
-      // ── 头部（蜂医风格矢量）──
+      // 头部矢量
       ctx.fillStyle = skinC; ctx.strokeStyle = tintColor ? tintColor : '#a07050'; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.arc(x, headCY, this.headR, 0, Math.PI*2); ctx.fill(); ctx.stroke();
       const hC = tintColor || '#2d4a22';
@@ -789,14 +917,7 @@ class Target {
         ctx.arc(x + gd*this.headR*0.5, headCY - this.headR*1.35, this.headR*0.1, 0, Math.PI*2);
         ctx.fill();
       } // end if(!tintColor) for antenna
-    } // end if(!fengyiReady || tintColor)
-
-    // ── 立绘模式死亡特效叠加 ──
-    if(fengyiReady && tintColor && this.dying){
-      ctx.globalAlpha = alpha * 0.55;
-      ctx.fillStyle = tintColor;
-      ctx.fillRect(x - imgW/2, imgTop, imgW, imgH);
-    }
+    } // end else (fallback)
 
     // ── 血条 ──
     if(!this.dying && this.hp < this.maxHp){
@@ -907,7 +1028,7 @@ function startGame(){
   const btn = document.getElementById('startBtn');
   btn.textContent = '⏹ 停止'; btn.classList.add('stop');
   updateHUD(); spawnTargets();
-  const ms = {sprint:1600, peek:2000, multi:1200}[GS.mode] || 1600;
+  const ms = {sprint:1600, multi:1200}[GS.mode] || 1600;
   GS.spawnInterval = setInterval(spawnTargets, ms);
   GS.timer = setInterval(() => {
     GS.timeLeft--;
@@ -920,7 +1041,7 @@ function startGame(){
 function spawnTargets(){
   if(!GS.running) return;
   GS.targets = GS.targets.filter(t => t.alive);
-  const max = {sprint:1, peek:1, multi:3}[GS.mode] || 1;
+  const max = {sprint:1, multi:3}[GS.mode] || 1;
   const need = max - GS.targets.length;
   for(let i = 0; i < need; i++) GS.targets.push(new Target(GS.mode));
 }
@@ -946,7 +1067,7 @@ function gameLoop(ts){
 function drawScene(){
   ctx.clearRect(0, 0, W, H);
   try{ ctx.drawImage(getBg(), 0, 0); } catch(e){}
-  if(GS.mode === 'peek') drawCover();
+  if(GS.mode === 'peek_disabled') drawCover();
   GS.targets.sort((a,b) => b.dist - a.dist).forEach(t => t.draw(ctx));
 }
 
@@ -1214,7 +1335,7 @@ function renderStats(){
     tbody.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:22px">暂无记录 🎯</td></tr>';
     return;
   }
-  const mn = {sprint:'冲刺', peek:'探头', multi:'多目标'};
+  const mn = {sprint:'冲刺', multi:'多目标'};
   tbody.innerHTML = h.map(r => `<tr>
     <td>${r.time}</td>
     <td>${mn[r.mode]||r.mode}</td>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🎯 三角洲练枪训练营 v1.6</title>
+<title>🎯 三角洲练枪训练营 v1.7</title>
 <style>
   :root {
     --bg: #0a0e1a; --panel: #111827; --border: #1f2937;
@@ -114,7 +114,7 @@
 <body>
 
 <header>
-  <div class="logo">🎯 <span>三角洲</span> 练枪训练营 <small style="font-size:11px;opacity:.6;font-weight:400">v1.6</small></div>
+  <div class="logo">🎯 <span>三角洲</span> 练枪训练营 <small style="font-size:11px;opacity:.6;font-weight:400">v1.7</small></div>
   <div class="nav-tabs">
     <button class="nav-tab active" onclick="switchPage('arena',this)">🎮 训练场</button>
     <button class="nav-tab" onclick="switchPage('sens',this)">⚙️ 灵敏度</button>
@@ -849,20 +849,22 @@ wrap.addEventListener('mousedown', e => {
     wrap.requestPointerLock();
     return;
   }
-  // 正常射击
+  // 正常射击 — 先清除可能残留的旧 timer，防止 interval 叠加
   mouseDown = true;
+  clearInterval(shootTimer); shootTimer = null;
   doShoot();
   shootTimer = setInterval(doShoot, FIRE_RATE);
 });
-document.addEventListener('mouseup', e => {
-  if(e.button !== 0) return;
+// mouseup + pointerup 双保险，Pointer Lock 模式下 mouseup 有时不触发
+function stopFire(){
   mouseDown = false;
   clearInterval(shootTimer); shootTimer = null;
-});
-wrap.addEventListener('mouseleave', () => {
-  mouseDown = false;
-  clearInterval(shootTimer); shootTimer = null;
-});
+}
+document.addEventListener('mouseup',    e => { if(e.button === 0) stopFire(); });
+document.addEventListener('pointerup',  e => { if(e.button === 0) stopFire(); });
+// 失去焦点时也停止射击
+window.addEventListener('blur', stopFire);
+wrap.addEventListener('mouseleave', stopFire);
 wrap.addEventListener('contextmenu', e => e.preventDefault());
 
 function setMode(m){
@@ -1221,6 +1223,7 @@ function clearHistory(){
 </script>
 </body>
 </html>
+
 
 
 

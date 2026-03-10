@@ -734,7 +734,9 @@ class Target {
         this.lastReverseTime = now;
         this.reverseCooldown = 400 + Math.random() * 700;
       }
-      this.x += this.dir * this.speed * dt;
+      // 单帧移动距离上限（防止大 dt 时目标瞬移）
+      const maxStep = W * 0.12;
+      this.x += Math.max(-maxStep, Math.min(maxStep, this.dir * this.speed * dt));
       if(this.x < -100 || this.x > W + 100) this.alive = false;
     }
   }
@@ -835,14 +837,19 @@ let GS = {
 
 // ── 鼠标事件（在 GS 声明后绑定）──
 // click 用于请求 Pointer Lock（游戏未开始时）
-wrap.addEventListener('click', () => {
-  if (!GS.running && !isPointerLocked) wrap.requestPointerLock();
-});
 wrap.addEventListener('mousedown', e => {
   if(e.button !== 0) return;
-  // 游戏运行中但未锁定：先锁定鼠标
-  if(GS.running && !isPointerLocked){ wrap.requestPointerLock(); return; }
-  if(!GS.running) return;
+  // 未开始：点击锁定鼠标（不触发射击）
+  if(!GS.running){
+    if(!isPointerLocked) wrap.requestPointerLock();
+    return;
+  }
+  // 运行中但未锁定：先锁定，等下次点击再射击
+  if(!isPointerLocked){
+    wrap.requestPointerLock();
+    return;
+  }
+  // 正常射击
   mouseDown = true;
   doShoot();
   shootTimer = setInterval(doShoot, FIRE_RATE);
@@ -903,8 +910,12 @@ function spawnTargets(){
 
 function gameLoop(ts){
   if(!GS.running) return;
-  const dt = Math.min((ts - GS.lastFrame) / 1000, 0.05);
+  // 限制 dt 上限为 33ms（30fps），避免浏览器节流/失焦后 dt 暴跳导致靶子瞬移卡顿
+  const rawDt = (ts - GS.lastFrame) / 1000;
+  const dt = Math.min(rawDt, 0.033);
   GS.lastFrame = ts;
+  // 如果帧间隔超过 200ms（页面失焦后回来），跳过本帧更新，只推进时间戳
+  if(rawDt > 0.2) { requestAnimationFrame(gameLoop); return; }
 
   // 后坐力视觉平滑插值（准星跟随 target 值）
   const lerpFactor = 1 - Math.pow(1 - Math.min(RECOIL_LERP * dt, 0.99), 1);
@@ -1210,6 +1221,7 @@ function clearHistory(){
 </script>
 </body>
 </html>
+
 
 
 

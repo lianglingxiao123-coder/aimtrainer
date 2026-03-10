@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🎯 三角洲练枪训练营 v1.8</title>
+<title>🎯 三角洲练枪训练营 v1.9</title>
 <style>
   :root {
     --bg: #0a0e1a; --panel: #111827; --border: #1f2937;
@@ -114,7 +114,7 @@
 <body>
 
 <header>
-  <div class="logo">🎯 <span>三角洲</span> 练枪训练营 <small style="font-size:11px;opacity:.6;font-weight:400">v1.8</small></div>
+  <div class="logo">🎯 <span>三角洲</span> 练枪训练营 <small style="font-size:11px;opacity:.6;font-weight:400">v1.9</small></div>
   <div class="nav-tabs">
     <button class="nav-tab active" onclick="switchPage('arena',this)">🎮 训练场</button>
     <button class="nav-tab" onclick="switchPage('sens',this)">⚙️ 灵敏度</button>
@@ -569,15 +569,9 @@ syncCrosshair();
 // ── 鼠标按下/抬起：只维护 mouseDown 状态，不启动任何 timer ──
 wrap.addEventListener('mousedown', e => {
   if (e.button !== 0) return;
-  if (!GS.running) {
-    // 未开始时点击只锁定鼠标
-    if (!isPointerLocked) wrap.requestPointerLock();
-    return;
-  }
-  if (!isPointerLocked) {
-    wrap.requestPointerLock();
-    return;
-  }
+  if (!GS.running) return; // 游戏未开始，不处理（由按钮 onclick 触发 startGame）
+  // 运行中未锁定：异步请求锁定，本次点击仍标记 mouseDown（锁定后生效）
+  if (!isPointerLocked) wrap.requestPointerLock();
   mouseDown = true;
 });
 
@@ -601,8 +595,8 @@ function startGame(){
   recoilY = 0; recoilX = 0; recoilTargetY = 0; recoilTargetX = 0; shotIndex = 0; if(resetTimer){ clearTimeout(resetTimer); resetTimer = null; }
   // 初始化准星到中心
   mouseX = W / 2; mouseY = H / 2;
-  // 请求 Pointer Lock 以启用相对位移灵敏度
-  wrap.requestPointerLock();
+  // 请求 Pointer Lock 以启用相对位移灵敏度（try/catch 防止浏览器拒绝时崩溃）
+  try { wrap.requestPointerLock(); } catch(e) {}
   Object.assign(GS, {
     running:true, kills:0, hits:0, misses:0, headshots:0,
     combo:0, maxCombo:0, shotsFired:0, reactionTimes:[],
@@ -947,6 +941,9 @@ function clearHistory(){
 </script>
 </body>
 </html>
+
+
+
 
 
 

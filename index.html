@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🎯 三角洲练枪训练营 v1.7</title>
+<title>🎯 三角洲练枪训练营 v1.8</title>
 <style>
   :root {
     --bg: #0a0e1a; --panel: #111827; --border: #1f2937;
@@ -114,7 +114,7 @@
 <body>
 
 <header>
-  <div class="logo">🎯 <span>三角洲</span> 练枪训练营 <small style="font-size:11px;opacity:.6;font-weight:400">v1.7</small></div>
+  <div class="logo">🎯 <span>三角洲</span> 练枪训练营 <small style="font-size:11px;opacity:.6;font-weight:400">v1.8</small></div>
   <div class="nav-tabs">
     <button class="nav-tab active" onclick="switchPage('arena',this)">🎮 训练场</button>
     <button class="nav-tab" onclick="switchPage('sens',this)">⚙️ 灵敏度</button>
@@ -527,346 +527,66 @@ function syncCrosshair(){
 }
 syncCrosshair();
 
-// ── 射击参数 ──
-let mouseDown = false, shootTimer = null;
-const FIRE_RATE = 100; // ms，约10发/秒
+// ── 射击系统（RAF驱动，无 setInterval）──
+// 用 gameLoop 每帧检查 mouseDown + 上次射击时间，完全避免 interval 叠加
+let mouseDown    = false;
+const FIRE_RATE  = 100; // ms，约10发/秒
+let lastShotTime = 0;
 
-// ── 人体比例常量（7头身）──
-// 以 BASE_SCALE=1 时 总高=175px 为基准
-const TOTAL_H_BASE   = 175;
-const HEAD_FRAC      = 1/7;      // 头占1/7
-const TORSO_FRAC     = 2.5/7;    // 躯干2.5头
-const LEG_FRAC       = 3.5/7;    // 腿3.5头（大腿1.75+小腿1.75）
-// 宽度
-const TORSO_W_RATIO  = 1.45;     // 肩宽/头宽
-const WAIST_W_RATIO  = 0.92;     // 腰宽/肩宽
-const ARM_W_RATIO    = 0.38;     // 手臂线宽/头宽
-const LEG_W_RATIO    = 0.48;     // 腿线宽/头宽
+// ── 准星坐标（在 GS 声明后初始化到中心）──
+let mouseX = 0, mouseY = 0;
+let isPointerLocked = false;
 
-// 伤害
-const HP_MAX   = 100;
-const DMG_HEAD = 50;
-const DMG_BODY = 25;
-const DMG_LIMB = 12;
-
-// 目标存活时限
-const TARGET_LIFETIME = 2000;
-
-// 距离范围（控制缩放）
-const DIST_MIN = 0.42, DIST_MAX = 1.0;
-const GROUND_RATIO = 0.62;
-
-// ── 背景缓存 ──
-function seeded(seed){ let s=seed; return ()=>{ s=(s*16807)%2147483647; return(s-1)/2147483646; }; }
-
-function getBg(){
-  if(bgCache && bgCache.width===W && bgCache.height===H) return bgCache;
-  bgCache = document.createElement('canvas');
-  bgCache.width = W; bgCache.height = H;
-  const mc = bgCache.getContext('2d');
-  const gY = H * GROUND_RATIO;
-  const rng = seeded(37), rng2 = seeded(91);
-  const sky = mc.createLinearGradient(0,0,0,gY);
-  sky.addColorStop(0,'#141e2e'); sky.addColorStop(1,'#1e3045');
-  mc.fillStyle = sky; mc.fillRect(0,0,W,gY);
-  mc.fillStyle = '#1a2e40';
-  mc.beginPath(); mc.moveTo(0,gY);
-  let x=0;
-  while(x<W){ const mw=90+rng()*130,mh=55+rng()*85; mc.lineTo(x+mw/2,gY-mh); mc.lineTo(x+mw,gY); x+=mw; }
-  mc.lineTo(W,gY); mc.closePath(); mc.fill();
-  mc.fillStyle='#112010';
-  for(let tx=0;tx<W;tx+=20+rng2()*25){
-    const th=25+rng2()*38,tw=4+rng2()*4;
-    mc.fillRect(tx,gY-th,tw,th);
+document.addEventListener('pointerlockchange', () => {
+  isPointerLocked = (document.pointerLockElement === wrap);
+  if (!isPointerLocked) {
+    mouseX = W / 2;
+    mouseY = H / 2;
+    mouseDown = false; // Pointer Lock 退出时强制停止射击
   }
-  const gr=mc.createLinearGradient(0,gY,0,H);
-  gr.addColorStop(0,'#243a16'); gr.addColorStop(.4,'#182a10'); gr.addColorStop(1,'#0e1a09');
-  mc.fillStyle=gr; mc.fillRect(0,gY,W,H-gY);
-  mc.strokeStyle='rgba(80,130,50,.45)'; mc.lineWidth=2;
-  mc.beginPath(); mc.moveTo(0,gY); mc.lineTo(W,gY); mc.stroke();
-  return bgCache;
+});
+
+wrap.addEventListener('mousemove', e => {
+  if (isPointerLocked) {
+    const scale = getSensScale();
+    mouseX = Math.max(0, Math.min(W, mouseX + e.movementX * scale));
+    mouseY = Math.max(0, Math.min(H, mouseY + e.movementY * scale));
+  } else {
+    const r = wrap.getBoundingClientRect();
+    mouseX = e.clientX - r.left;
+    mouseY = e.clientY - r.top;
+  }
+  crosshairEl.style.left = mouseX + 'px';
+});
+
+function syncCrosshair(){
+  crosshairEl.style.left = mouseX + 'px';
+  crosshairEl.style.top  = (mouseY - recoilY) + 'px';
+  requestAnimationFrame(syncCrosshair);
 }
+syncCrosshair();
 
-// ── Target 类 ──
-class Target {
-  constructor(mode){
-    this.mode = mode;
-    this.alive = true; this.dying = false; this.dyingTimer = 0;
-    // dyingReason: 'killed'(被击杀→红) | 'timeout'(超时→蓝)
-    this.dyingReason = 'killed';
-    this.hp = HP_MAX; this.maxHp = HP_MAX;
-    this.born = Date.now();
-    this.hits = 0; this.headshots = 0;
-
-    // 距离 → 缩放
-    this.dist  = DIST_MIN + Math.random() * (DIST_MAX - DIST_MIN);
-    this.scale = this.dist;
-    const s = this.scale;
-
-    // 人体各尺寸
-    const totalH   = TOTAL_H_BASE * s;
-    this.headR     = totalH * HEAD_FRAC / 2;
-    this.torsoH    = totalH * TORSO_FRAC;
-    this.legH      = totalH * LEG_FRAC;
-    this.shoulderW = this.headR * 2 * TORSO_W_RATIO;
-    this.waistW    = this.shoulderW * WAIST_W_RATIO;
-    this.armW      = this.headR * 2 * ARM_W_RATIO;
-    this.legW      = this.headR * 2 * LEG_W_RATIO;
-    // 脖子高度（比 headR 短：仅 0.4 倍头半径）
-    this.neckH     = this.headR * 0.4;
-
-    // 脚的 Y 坐标（近大远小，远的靠近地平线）
-    const gY   = H * GROUND_RATIO;
-    const dNorm = (this.dist - DIST_MIN) / (DIST_MAX - DIST_MIN);
-    this.footY     = gY - dNorm * (gY * 0.28) + (Math.random()-0.5) * H * 0.04;
-    this.baseFootY = this.footY;
-
-    // 出现位置：避开左右各10%；65%随机屏幕中段，35%从边缘稍内侧进入
-    const MARGIN = 0.10; // 左右各10%不出现
-    const fromEdge = (mode === 'peek') || Math.random() < 0.35;
-    if(fromEdge){
-      this.dir = Math.random() < 0.5 ? 1 : -1;
-      // 从边缘进入：起点略在屏幕外但靠近边缘（而不是-50/W+50绝对边缘）
-      this.x   = this.dir > 0
-        ? -(20 + Math.random() * 30)
-        : W + (20 + Math.random() * 30);
-    } else {
-      // 随机分布在可见区域中段（避开左右10%）
-      this.x   = W * MARGIN + Math.random() * W * (1 - 2 * MARGIN);
-      this.dir = Math.random() < 0.5 ? 1 : -1;
-    }
-
-    // 速度（去掉 patrol，默认用 sprint 范围）
-    const speedRanges = {sprint:[180,340], peek:[0,0], multi:[90,250]};
-    const [mn, mx] = speedRanges[mode] || [180,340];
-    this.speed = (mn + Math.random() * (mx - mn)) * s;
-
-    // 折返：概率提升（约每0.6~1.2秒一次）
-    this.lastReverseTime  = Date.now() + Math.random() * 400;
-    this.reverseCooldown  = 400 + Math.random() * 700;
-    this.reverseChance    = 0.025; // 提升至2.5%/帧
-
-    // 跳跃：概率提升，冷却缩短
-    this.vy = 0; this.jumping = false;
-    this.lastJumpTime  = Date.now() + Math.random() * 1000;
-    this.jumpCooldown  = 600 + Math.random() * 1500;  // 原1200~4200，现600~2100
-
-    // 探头模式
-    if(mode === 'peek'){
-      this.peekState    = 'in';
-      this.peekEdge     = this.dir > 0
-        ? W * 0.1 + Math.random() * W * 0.4
-        : W * 0.5 + Math.random() * W * 0.35;
-      this.peekDuration = 500 + Math.random() * 900;
-      this.peekVisible  = 0;
-      this.speed        = (220 + Math.random() * 140) * s;
-      this.x = this.dir > 0 ? this.peekEdge - 80 : this.peekEdge + 80;
-    }
-
-    this.walkPhase = Math.random() * Math.PI * 2;
-    this.color = {
-      skin:'#c8a882', torso:'#3a5a4a', pants:'#2e3e2e',
-      boots:'#1a1a1a', helmet:'#3a5a4a'
-    };
-  }
-
-  // 关键 Y 坐标（脖子缩短：shoulderY 更靠近头）
-  get headCY(){ return this.footY - this.legH - this.torsoH - this.neckH - this.headR; }
-  get shoulderY(){ return this.headCY + this.headR + this.neckH; }
-  get hipY(){ return this.shoulderY + this.torsoH; }
-  get kneeY(){ return this.hipY + this.legH * 0.52; }
-
-  update(dt){
-    if(!this.alive) return;
-    if(this.dying){
-      this.dyingTimer += dt * 1000;
-      if(this.dyingTimer > 380){
-        // 超时消失时，通知 GS 计数
-        if(this.dyingReason === 'timeout') GS.escaped++;
-        this.alive = false;
-      }
-      return;
-    }
-    // 超时消失（蓝色）
-    if(Date.now() - this.born > TARGET_LIFETIME){
-      this.dying = true; this.dyingTimer = 0;
-      this.dyingReason = 'timeout';
-      return;
-    }
-
-    // 跳跃（概率提升：0.025/帧约每0.7~1.5秒一次）
-    const now = Date.now();
-    if(!this.jumping && now - this.lastJumpTime > this.jumpCooldown && this.mode !== 'peek'){
-      if(Math.random() < 0.025){
-        this.jumping = true;
-        this.vy = -(320 + Math.random() * 200) * this.scale;
-        this.lastJumpTime = now;
-        this.jumpCooldown = 600 + Math.random() * 1500;
-      }
-    }
-    if(this.jumping){
-      this.vy += 900 * this.scale * dt;
-      this.footY += this.vy * dt;
-      if(this.footY >= this.baseFootY){
-        this.footY = this.baseFootY; this.vy = 0; this.jumping = false;
-      }
-    }
-
-    this.walkPhase += dt * 14; // 统一冲刺步频
-
-    // 水平移动
-    if(this.mode === 'peek'){
-      if(this.peekState === 'in'){
-        this.x += this.dir * this.speed * dt;
-        const reached = this.dir > 0 ? this.x >= this.peekEdge : this.x <= this.peekEdge;
-        if(reached){ this.x = this.peekEdge; this.peekState = 'visible'; this.peekVisible = Date.now(); }
-      } else if(this.peekState === 'visible'){
-        if(Date.now() - this.peekVisible > this.peekDuration) this.peekState = 'out';
-      } else {
-        this.x -= this.dir * this.speed * dt;
-        const gone = this.dir > 0 ? this.x < this.peekEdge - 120 : this.x > this.peekEdge + 120;
-        if(gone) this.alive = false;
-      }
-    } else {
-      // 随机折返（概率提升）
-      if(now - this.lastReverseTime > this.reverseCooldown && Math.random() < this.reverseChance){
-        this.dir *= -1;
-        this.lastReverseTime = now;
-        this.reverseCooldown = 400 + Math.random() * 700;
-      }
-      // 单帧移动距离上限（防止大 dt 时目标瞬移）
-      const maxStep = W * 0.12;
-      this.x += Math.max(-maxStep, Math.min(maxStep, this.dir * this.speed * dt));
-      if(this.x < -100 || this.x > W + 100) this.alive = false;
-    }
-  }
-
-  draw(ctx){
-    if(!this.alive) return;
-    const x = this.x, s = this.scale;
-    const headCY    = this.headCY;
-    const shoulderY = this.shoulderY;
-    const hipY      = this.hipY;
-    const kneeY     = this.kneeY;
-    const foot      = this.footY;
-    const gd        = this.dir;
-    const alpha     = this.dying ? Math.max(0, 1 - this.dyingTimer/380) : 1;
-
-    // 颜色主题：正常/低血闪烁/被击杀(红)/超时(蓝)
-    const lowFlash = !this.dying && this.hp < 50 && Math.floor(Date.now()/120) % 2 === 0;
-    let tintColor = null;
-    if(this.dying && this.dyingReason === 'killed')  tintColor = '#ff3366';
-    if(this.dying && this.dyingReason === 'timeout') tintColor = '#00aaff';
-    if(lowFlash) tintColor = '#ff3366';
-
-    ctx.save();
-    ctx.globalAlpha = alpha;
-
-    const skinC  = tintColor || this.color.skin;
-    const torsoC = tintColor || this.color.torso;
-    const pantsC = tintColor || this.color.pants;
-    const bootsC = tintColor || this.color.boots;
-    const helmC  = tintColor || this.color.helmet;
-
-    // 阴影
-    ctx.fillStyle = 'rgba(0,0,0,.2)';
-    ctx.beginPath(); ctx.ellipse(x, foot+2*s, this.shoulderW*0.8, 3*s, 0, 0, Math.PI*2); ctx.fill();
-
-    // ── 简笔画人形靶渲染 ──
-    const totalH = this.footY - (this.headCY - this.headR);
-    drawStickFigure(ctx, x, this.footY, totalH, gd, this.walkPhase, alpha, tintColor);
-
-    // ── 血条 ──
-    if(!this.dying && this.hp < this.maxHp){
-      const bw = sw * 1.5, bh = 4*s;
-      const bx = x - bw/2, by = headCY - this.headR - 11*s;
-      ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(bx, by, bw, bh);
-      const pct = this.hp / this.maxHp;
-      ctx.fillStyle = pct > 0.5 ? '#00ff88' : pct > 0.25 ? '#ffaa00' : '#ff3366';
-      ctx.fillRect(bx, by, bw*pct, bh);
-      ctx.strokeStyle = 'rgba(255,255,255,.2)'; ctx.lineWidth = .5;
-      ctx.strokeRect(bx, by, bw, bh);
-    }
-
-    ctx.restore();
-  }
-
-  checkHit(mx, my){
-    const headCY    = this.headCY;
-    const shoulderY = this.shoulderY;
-    const hipY      = this.hipY;
-    const foot      = this.footY;
-    const s         = this.scale;
-    // 头部
-    if(Math.hypot(mx - this.x, my - headCY) < this.headR + 4*s) return 'head';
-    // 躯干
-    const tx1 = this.x - this.shoulderW/2 - 3, tx2 = this.x + this.shoulderW/2 + 3;
-    if(mx > tx1 && mx < tx2 && my > shoulderY - 3 && my < hipY + 4) return 'body';
-    // 腿
-    const lx1 = this.x - this.shoulderW*0.55, lx2 = this.x + this.shoulderW*0.55;
-    if(mx > lx1 && mx < lx2 && my > hipY && my < foot + 5) return 'limb';
-    // 手臂范围
-    if(mx > this.x - this.shoulderW*1.1 && mx < this.x + this.shoulderW*1.1
-       && my > shoulderY && my < hipY + this.headR*2) return 'limb';
-    return null;
-  }
-
-  takeDamage(type){
-    const dmg = type === 'head' ? DMG_HEAD : type === 'limb' ? DMG_LIMB : DMG_BODY;
-    this.hp = Math.max(0, this.hp - dmg);
-    if(type === 'head') this.headshots++;
-    this.hits++;
-    if(this.hp <= 0 && !this.dying){
-      this.dying = true; this.dyingTimer = 0;
-      this.dyingReason = 'killed';
-      return true;
-    }
-    return false;
-  }
-}
-
-// ── 游戏状态 ──
-let GS = {
-  running: false, mode: 'sprint',
-  kills: 0, hits: 0, misses: 0, headshots: 0, combo: 0, maxCombo: 0,
-  escaped: 0,
-  shotsFired: 0, reactionTimes: [],
-  timeLeft: 60, targets: [], animFrame: null, timer: null, spawnInterval: null,
-  lastFrame: 0,
-};
-
-// ── 鼠标事件（在 GS 声明后绑定）──
-// click 用于请求 Pointer Lock（游戏未开始时）
+// ── 鼠标按下/抬起：只维护 mouseDown 状态，不启动任何 timer ──
 wrap.addEventListener('mousedown', e => {
-  if(e.button !== 0) return;
-  // 未开始：点击锁定鼠标（不触发射击）
-  if(!GS.running){
-    if(!isPointerLocked) wrap.requestPointerLock();
+  if (e.button !== 0) return;
+  if (!GS.running) {
+    // 未开始时点击只锁定鼠标
+    if (!isPointerLocked) wrap.requestPointerLock();
     return;
   }
-  // 运行中但未锁定：先锁定，等下次点击再射击
-  if(!isPointerLocked){
+  if (!isPointerLocked) {
     wrap.requestPointerLock();
     return;
   }
-  // 正常射击 — 先清除可能残留的旧 timer，防止 interval 叠加
   mouseDown = true;
-  clearInterval(shootTimer); shootTimer = null;
-  doShoot();
-  shootTimer = setInterval(doShoot, FIRE_RATE);
 });
-// mouseup + pointerup 双保险，Pointer Lock 模式下 mouseup 有时不触发
-function stopFire(){
-  mouseDown = false;
-  clearInterval(shootTimer); shootTimer = null;
-}
-document.addEventListener('mouseup',    e => { if(e.button === 0) stopFire(); });
-document.addEventListener('pointerup',  e => { if(e.button === 0) stopFire(); });
-// 失去焦点时也停止射击
+
+function stopFire() { mouseDown = false; }
+document.addEventListener('mouseup',   e => { if (e.button === 0) stopFire(); });
+document.addEventListener('pointerup', e => { if (e.button === 0) stopFire(); });
 window.addEventListener('blur', stopFire);
 wrap.addEventListener('mouseleave', stopFire);
 wrap.addEventListener('contextmenu', e => e.preventDefault());
-
 function setMode(m){
   GS.mode = m;
   document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
@@ -912,21 +632,25 @@ function spawnTargets(){
 
 function gameLoop(ts){
   if(!GS.running) return;
-  // 限制 dt 上限为 33ms（30fps），避免浏览器节流/失焦后 dt 暴跳导致靶子瞬移卡顿
   const rawDt = (ts - GS.lastFrame) / 1000;
-  const dt = Math.min(rawDt, 0.033);
+  const dt    = Math.min(rawDt, 0.033);
   GS.lastFrame = ts;
-  // 如果帧间隔超过 200ms（页面失焦后回来），跳过本帧更新，只推进时间戳
-  if(rawDt > 0.2) { requestAnimationFrame(gameLoop); return; }
+  // 页面失焦后回来，帧间隔太大则只更新时间戳，不做物理
+  if(rawDt > 0.2) { GS.animFrame = requestAnimationFrame(gameLoop); return; }
 
-  // 后坐力视觉平滑插值（准星跟随 target 值）
+  // ── RAF 驱动的射击 ── 不依赖任何 setInterval
+  if(mouseDown && isPointerLocked && (ts - lastShotTime >= FIRE_RATE)){
+    lastShotTime = ts;
+    doShoot();
+  }
+
+  // 后坐力平滑插值
   const lerpFactor = 1 - Math.pow(1 - Math.min(RECOIL_LERP * dt, 0.99), 1);
   recoilY += (recoilTargetY - recoilY) * lerpFactor;
   recoilX += (recoilTargetX - recoilX) * lerpFactor;
 
   GS.targets.forEach(t => t.update(dt));
   GS.targets = GS.targets.filter(t => t.alive);
-  // 实时同步漏掉数
   document.getElementById('hud-escaped').textContent = GS.escaped;
   drawScene();
   GS.animFrame = requestAnimationFrame(gameLoop);
@@ -1030,7 +754,7 @@ function updateHUD(){
 function stopGame(showResult=true){
   GS.running = false;
   clearInterval(GS.timer); clearInterval(GS.spawnInterval);
-  clearInterval(shootTimer); mouseDown = false;
+  stopFire();
   cancelAnimationFrame(GS.animFrame);
   ctx.clearRect(0, 0, W, H);
   // 退出 Pointer Lock
@@ -1223,6 +947,9 @@ function clearHistory(){
 </script>
 </body>
 </html>
+
+
+
 
 
 
